@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # grant by ROOT is required
-(( $EUID == 0 )) && exec sudo "$0" "$@"
+(( $EUID != 0 )) && exec sudo "$0" "$@"
 
 exec 1>> /boot/update-refind.log 2>&1
 

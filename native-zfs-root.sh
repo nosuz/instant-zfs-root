@@ -9,7 +9,7 @@ refind_ver='0.11.4'
 
 
 # grant by ROOT is required
-(( $EUID == 0 )) && exec sudo "$0" "$@"
+(( $EUID != 0 )) && exec sudo "$0" "$@"
 
 single_fs=0
 
