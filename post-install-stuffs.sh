@@ -3,6 +3,9 @@
 # grant by ROOT is required
 (( $EUID != 0 )) && exec sudo "$0" "$@"
 
+dpkg -l | grep ^ii | grep grub | awk '{print $2}' | xargs apt remove -y
+apt autoremove -y
+
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
