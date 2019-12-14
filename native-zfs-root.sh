@@ -161,9 +161,12 @@ for drive in ${drives[@]}; do
     sgdisk --zap-all /dev/$drive
     sgdisk --clear /dev/$drive
     sgdisk --new=1:1M:+512M --typecode=1:EF00 /dev/$drive
+
+    sgdisk -n 2:0:0 -t 2:8300 /dev/$drive # Linux Filesystem
     # All same size drives have same number of sectors?
     # I am not sure. ZFS dones not accept smaller dirves for replace.
-    sgdisk -n 2:0:0 -t 2:8300 /dev/$drive # Linux Filesystem
+    # create 1G smaller partition
+    #sgdisk -n 2:0:-1G -t 2:8300 /dev/$drive # Linux Filesystem
 
     # create EFI boot partition
     mkdosfs -F 32 -s 1 -n EFI /dev/${drive}1
