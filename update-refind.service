@@ -1,0 +1,12 @@
+[Unit]
+Description=Copy latest kernel to EFI patitions and update refind.conf
+Before=shutdown.target reboot.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+ExecStop=/boot/update-refind.sh
+
+[Install]
+WantedBy=multi-user.target
