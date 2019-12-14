@@ -8,21 +8,21 @@ exec 1>> /boot/update-refind.log 2>&1
 echo ----------------
 date
 
-loader_path=$(ls /boot/vmlinuz-* | sort -V | tail -n 1)
-loader=$(basename $loader_path)
-echo $loader
-src=$(stat -c %Y $loader_path)
+kernel_path=$(ls /boot/vmlinuz-* | sort -V | tail -n 1)
+kernel=$(basename $kernel_path)
+echo $kernel
+src=$(stat -c %Y $kernel_path)
 
-initrd="initrd.img-${loader#vmlinuz-}"
+initrd="initrd.img-${kernel#vmlinuz-}"
 echo $initrd
 
 for efi in $(ls /boot | grep efi_); do
     echo $efi
 
     update=false
-    dst=$(stat -c %Y /boot/$efi/$loader || echo 0)
+    dst=$(stat -c %Y /boot/$efi/$kernel || echo 0)
     if (( $src > $dst )); then
-	cp /boot/$loader /boot/$efi
+	cp /boot/$kernel /boot/$efi
 	update=true
     fi
 
@@ -47,7 +47,7 @@ scan_all_linux_kernels false
 menuentry "Ubuntu ZFS" {
     ostype Linux
     graphics on
-    loader /$loader
+    loader /$kernel
     initrd /$initrd
     options "root=ZFS=tank/UBUNTU/root quiet"
 }
