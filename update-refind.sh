@@ -19,6 +19,9 @@ echo $initrd
 for efi in $(ls /boot | grep efi_); do
     echo $efi
 
+    # make sure EFI partition is mounted
+    [[ -e /boot/$efi/efi ]] || break
+
     update=false
     dst=$(stat -c %Y /boot/$efi/$kernel || echo 0)
     if (( $src > $dst )); then
