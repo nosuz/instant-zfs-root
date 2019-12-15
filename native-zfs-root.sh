@@ -298,7 +298,7 @@ Next:
  1. Shutdown system.
  2. Remove current root fs drive.
  3. Reboot
- 4. (Optional) Run remove-grub.sh if you want to remove Grub.
+ 4. (Optional) Run post-install-stuffs.sh to remobe GRUB and install update-refind service.
 
 -*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*-
 EOF_MSG
