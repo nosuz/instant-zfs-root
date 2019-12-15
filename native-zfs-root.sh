@@ -45,6 +45,12 @@ case "$ubuntu_release" in
 	;;
 esac
 
+arch=$(uname -m)
+if [[ $arch != x86_64 ]]; then
+    echo ZFS is available only on 64-bit OS.
+    exit
+fi
+
 # get target drive
 root_drive=$(mount | grep ' / ' | awk '{print $1}' | sed -e 's/[0-9]$//')
 
