@@ -288,7 +288,7 @@ for drive in ${drives[@]}; do
 done
 
 # show final message
-cat <<EOF_MSG
+cat <<EOF_MSG1
 
 -*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*-
 
@@ -298,7 +298,14 @@ Next:
  1. Shutdown system.
  2. Remove current root fs drive.
  3. Reboot
+EOF_MSG1
+
+if [[ ! -e /sys/firmware/efi ]]; then
+    echo "      Make sure to boot from UEFI. This system didn't boot from UEFI."
+fi
+
+cat <<EOF_MSG2
  4. (Optional) Run post-install-stuffs.sh to remobe GRUB and install update-refind service.
 
 -*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*-
-EOF_MSG
+EOF_MSG2
