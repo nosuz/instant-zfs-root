@@ -10,27 +10,27 @@ cd /boot
 echo ----------------
 date
 
-kernel_path=$(ls vmlinuz-* | sort -V | tail -n 1)
-kernel=$(basename $kernel_path)
+kernel=$(ls vmlinuz-* | sort -V | tail -n 1)
 echo $kernel
-src=$(stat -c %Y $kernel_path)
 
 initrd="initrd.img-${kernel#vmlinuz-}"
 echo $initrd
 
-for efi in $(ls /boot | grep efi_); do
+for efi in $(ls | grep efi_); do
     echo $efi
 
     # make sure EFI partition is mounted
     [[ -e $efi/efi ]] || break
 
     update=false
+    src=$(stat -c %Y $kernel)
     dst=$(stat -c %Y $efi/$kernel || echo 0)
     if (( $src > $dst )); then
 	cp $kernel $efi
 	update=true
     fi
 
+    src=$(stat -c %Y $initrd)
     dst=$(stat -c %Y $efi/$initrd || echo 0)
     if (( $src > $dst )); then
 	cp $initrd $efi
