@@ -31,19 +31,42 @@ EOF_HELP
 done
 
 # get Ubuntu Release
-ubuntu_release=$(lsb_release -r | awk '{print $2}')
-case "$ubuntu_release" in
-    19.04)
-	:
+distri=$(lsb_release -i | awk '{print $3}')
+release=$(lsb_release -r | awk '{print $2}')
+case "$distri" in
+    "Ubuntu")
+	subvol="Ubuntu"
+	case "$release" in
+	    19.04)
+		:
+		;;
+	    19.10)
+		:
+		;;
+	    *)
+		echo Ubuntu $release is not supported by this script.
+		exit
+		;;
+	esac
 	;;
-    19.10)
-	:
+    "LinuxMint")
+	subvol="Mint"
+	case "$release" in
+	    19.3)
+		:
+		;;
+	    *)
+		echo Linux mint $release is not supported by this script.
+		exit
+		;;
+	esac
 	;;
     *)
-	echo Ubuntu $ubuntu_release is not supported by this script.
+	echo $distri is not supported by this script.
 	exit
 	;;
 esac
+
 
 arch=$(uname -m)
 if [[ $arch != x86_64 ]]; then
@@ -191,63 +214,63 @@ zpool import -d /dev/disk/by-id tank
 zpool status
 
 # make subvolume for /(root)
-zfs create tank/UBUNTU
-zfs create tank/UBUNTU/root
+zfs create tank/$subvol
+zfs create tank/$subvol/root
 if (( $single_fs != 1 )); then
     # make subvolume for /home and copy on it.
-    zfs create tank/UBUNTU/home
+    zfs create tank/$subvol/home
 fi
 zfs list
 
 # copy system files
 mount --bind / /mnt
 echo ""
-echo "Copying / to /tank/UBUNTU/root. This takes for a few minutes."
-rsync -a --exclude=/home /mnt/ /tank/UBUNTU/root
+echo "Copying / to /tank/$subvol/root. This takes for a few minutes."
+rsync -a --exclude=/home /mnt/ /tank/$subvol/root
 umount /mnt
 
 # create home directory
-mkdir /tank/UBUNTU/root/home
-chmod 755 /tank/UBUNTU/root/home
+mkdir /tank/$subvol/root/home
+chmod 755 /tank/$subvol/root/home
 
 echo "Copying /home to /tank/ROOT/home."
 if (( $single_fs == 1 )); then
-    rsync -a /home/ /tank/UBUNTU/root/home
+    rsync -a /home/ /tank/$subvol/root/home
 else
-    rsync -a /home/ /tank/UBUNTU/home
-    zfs set mountpoint=/home tank/UBUNTU/home
+    rsync -a /home/ /tank/$subvol/home
+    zfs set mountpoint=/home tank/$subvol/home
 fi
 
 # edit /etc/fstab
-sed -e '/^#/! s/^/#/' /tank/UBUNTU/root/etc/fstab > /tank/UBUNTU/root/etc/fstab.new
-mv /tank/UBUNTU/root/etc/fstab.new /tank/UBUNTU/root/etc/fstab
+sed -e '/^#/! s/^/#/' /tank/$subvol/root/etc/fstab > /tank/$subvol/root/etc/fstab.new
+mv /tank/$subvol/root/etc/fstab.new /tank/$subvol/root/etc/fstab
 # comment out all
-#nano /tank/UBUNTU/root/etc/fstab
+#nano /tank/$subvol/root/etc/fstab
 
 # remove zpool.cache to accept zpool struct change
-rm /tank/UBUNTU/root/etc/zfs/zpool.cache
+rm /tank/$subvol/root/etc/zfs/zpool.cache
 
 # update initiramfs
 for d in proc sys dev;do
     echo "mount $d"
-    mount --bind /$d /tank/UBUNTU/root/$d
+    mount --bind /$d /tank/$subvol/root/$d
 done
 
-mkdir /tank/UBUNTU/root/boot/efi || true
-chroot /tank/UBUNTU/root update-initramfs -u -k all
+mkdir /tank/$subvol/root/boot/efi || true
+chroot /tank/$subvol/root update-initramfs -u -k all
 
 for d in proc sys dev;do
     echo "unmount $d"
-    umount /tank/UBUNTU/root/$d
+    umount /tank/$subvol/root/$d
 done
 
 # set mountpoint for root
-zfs set mountpoint=/ tank/UBUNTU/root
-zfs set mountpoint=none tank/UBUNTU
+zfs set mountpoint=/ tank/$subvol/root
+zfs set mountpoint=none tank/$subvol
 zfs set mountpoint=none tank
 
 mkdir /tmp/root
-mount -t zfs -o zfsutil tank/UBUNTU/root /tmp/root
+mount -t zfs -o zfsutil tank/$subvol/root /tmp/root
 
 kernel=$(uname -r)
 cat > /tmp/refind.conf <<EOF_CONF
@@ -261,7 +284,7 @@ menuentry "Ubuntu ZFS" {
     graphics on
     loader /vmlinuz-${kernel}
     initrd /initrd.img-${kernel}
-    options "root=ZFS=tank/UBUNTU/root quiet"
+    options "root=ZFS=tank/$subvol/root quiet"
 }
 EOF_CONF
 
