@@ -143,6 +143,7 @@ else
     exit
 fi
 
+apt update
 # install packges if some are missing
 apt install -y zfsutils-linux zfs-initramfs gdisk zip
 apt remove -y cryptsetup-initramfs
