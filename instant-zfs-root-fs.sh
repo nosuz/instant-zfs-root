@@ -226,7 +226,7 @@ zfs list
 mount --bind / /mnt
 echo ""
 echo "Copying / to /tank/$subvol/root. This takes for a few minutes."
-rsync -a --exclude=/home /mnt/ /tank/$subvol/root
+rsync --progress -a --exclude=/home /mnt/ /tank/$subvol/root
 umount /mnt
 
 # create home directory
@@ -235,9 +235,9 @@ chmod 755 /tank/$subvol/root/home
 
 echo "Copying /home to /tank/ROOT/home."
 if (( $single_fs == 1 )); then
-    rsync -a /home/ /tank/$subvol/root/home
+    rsync --progress -a /home/ /tank/$subvol/root/home
 else
-    rsync -a /home/ /tank/$subvol/home
+    rsync --progress -a /home/ /tank/$subvol/home
     zfs set mountpoint=/home tank/$subvol/home
 fi
 
