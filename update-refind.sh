@@ -24,14 +24,14 @@ for efi in $(ls | grep efi_); do
 
     update=false
     src=$(stat -c %Y $kernel)
-    dst=$(stat -c %Y $efi/$kernel || echo 0)
+    dst=$(stat -c %Y $efi/$kernel 2> /dev/null || echo 0)
     if (( $src > $dst )); then
 	cp $kernel $efi
 	update=true
     fi
 
     src=$(stat -c %Y $initrd)
-    dst=$(stat -c %Y $efi/$initrd || echo 0)
+    dst=$(stat -c %Y $efi/$initrd 2> /dev/null || echo 0)
     if (( $src > $dst )); then
 	cp $initrd $efi
 	update=true
