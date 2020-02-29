@@ -43,6 +43,9 @@ case "$distri" in
 	    19.10)
 		:
 		;;
+	    20.04)
+		:
+		;;
 	    *)
 		echo Ubuntu $release is not supported by this script.
 		exit
