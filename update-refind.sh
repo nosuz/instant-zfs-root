@@ -10,13 +10,13 @@ cd /boot
 echo ----------------
 date
 
-kernel=$(ls vmlinuz-* | sort -V | tail -n 1)
+kernel=$(ls -v vmlinuz-* | tail -n 1)
 echo $kernel
 
 initrd="initrd.img-${kernel#vmlinuz-}"
 echo $initrd
 
-for efi in $(ls | grep efi_); do
+for efi in $(ls efi_*); do
     echo $efi
 
     # make sure EFI partition is mounted
