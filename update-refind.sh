@@ -30,12 +30,28 @@ for efi in $(ls efi_*); do
 	update=true
     fi
 
+    # remove purged kernel
+    for installed in $(ls $efi/vmlinuz-*); do
+	if [[ ! -e $(basename $installed) ]]; then
+	    rm $installed
+	    echo "Removed $installed"
+	fi
+    done
+
     src=$(stat -c %Y $initrd)
     dst=$(stat -c %Y $efi/$initrd 2> /dev/null || echo 0)
     if (( $src > $dst )); then
 	cp $initrd $efi
 	update=true
     fi
+
+    # remove purged initrd
+    for installed in $(ls $efi/initrd.img-*); do
+	if [[ ! -e $(basename $installed) ]]; then
+	    rm $installed
+	    echo "Removed $installed"
+	fi
+    done
 
     if $update; then
 	echo "Update refind.conf"
