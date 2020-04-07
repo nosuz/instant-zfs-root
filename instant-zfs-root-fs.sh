@@ -5,7 +5,9 @@
 
 #https://pve.proxmox.com/wiki/Booting_a_ZFS_root_file_system_via_UEFI
 #https://wiki.archlinux.jp/index.php/GNU_Parted#UEFI.2FGPT_.E3.81.AE.E4.BE.8B
-refind_ver='0.11.4'
+
+# http://sourceforge.net/projects/refind/files/
+refind_ver='0.12.0'
 
 
 # grant by ROOT is required
@@ -156,7 +158,7 @@ if [[ -d refind-bin-${refind_ver} ]]; then
 fi
 
 if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
-    wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/0.11.4/refind-bin-${refind_ver}.zip/download
+    wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
 
     if [[ -s refind-bin-${refind_ver}.zip ]] ; then
 	echo Got refind-bin-${refind_ver}.zip
