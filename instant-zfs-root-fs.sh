@@ -169,25 +169,6 @@ if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
 fi
 unzip refind-bin-${refind_ver}.zip
 
-# install udev rules
-# make link to the member of ZFS in /dev
-if [[ ! -e /etc/udev/rules.d/90-zfs-vdev.rules ]] ; then
-        cat > /etc/udev/rules.d/90-zfs-vdev.rules <<EOF_UDEV
-# HOWTO install Ubuntu 14.04 or Later to a Native ZFS Root Filesystem
-# https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-install-Ubuntu-14.04-or-Later
--to-a-Native-ZFS-Root-Filesystem
-
-# Create by-id links in /dev as well for zfs vdev. Needed by grub
-# Force ata_id for USB disks
-KERNEL=="sd*[!0-9]", SUBSYSTEMS=="usb", IMPORT{program}="ata_id --export \$devno
-de"
-# Force ata_id when ID_VENDOR=ATA
-KERNEL=="sd*[!0-9]", ENV{ID_VENDOR}=="ATA", IMPORT{program}="ata_id --export \$devnode"
-# Add links for zfs_member only
-KERNEL=="sd*[0-9]", IMPORT{parent}=="ID_*", ENV{ID_FS_TYPE}=="zfs_member", SYMLINK+="\$env{ID_BUS}-\$env{ID_SERIAL}-part%n"
-EOF_UDEV
-fi
-
 # destroy existing ZFS pool
 zpool destroy tank
 
