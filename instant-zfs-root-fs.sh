@@ -27,7 +27,7 @@ while getopts "hs" opt; do
 EOF_HELP
 	    ;;
 	s)
-	    single_fs=1 
+	    single_fs=1
 	    ;;
     esac
 done
@@ -85,7 +85,7 @@ root_drive=$(mount | grep ' / ' | awk '{print $1}' | sed -e 's/[0-9]$//')
 drives=()
 while read drive; do
     drives+=(${drive##/dev/})
-done < <(ls /dev/sd[a-z]|grep -v $root_drive)
+done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9]|grep -v $root_drive)
 if (( ${#drives[@]} == 0 )); then
     echo No drives for ZFS
     exit
@@ -96,25 +96,6 @@ else
     echo Found ${#drives[@]} drives
 fi
 
-case "${#drives[@]}" in
-    1)
-	zpool_type="Single drive pool"
-	zpool_target="${drives[0]}2"
-	;;
-    2)
-	zpool_type="Mirror pool"
-	zpool_target="mirror ${drives[0]}2 ${drives[1]}2"
-	;;
-    3)
-	zpool_type="RAIDZ pool"
-	zpool_target="raidz ${drives[0]}2 ${drives[1]}2 ${drives[2]}2"
-	;;
-    4)
-	zpool_type="RAIDZ2 pool"
-	zpool_target="raidz2 ${drives[0]}2 ${drives[1]}2 ${drives[2]}2 ${drives[3]}2"
-	;;
-esac
-
 lsblk
 cat <<EOF_DRIVE_HEADER
 
@@ -123,12 +104,34 @@ ALL data in next drive are DESTROYED and patitioned as follows.
 
 EOF_DRIVE_HEADER
 
+targets=()
 for drive in ${drives[@]}; do
-    cat <<EOF_DRIVE
+    case "$drive" in
+	sd*)
+	    cat <<EOF_DRIVE
 ${drive}
   ${drive}1 UEFI
   ${drive}2 ZFS pool
 EOF_DRIVE
+	    targets+=(${drive}2)
+	    ;;
+	nvme*)
+	    cat <<EOF_DRIVE
+${drive}
+  ${drive}p1 UEFI
+  ${drive}p2 ZFS pool
+EOF_DRIVE
+	    targets+=(${drive}p2)
+	    ;;
+	*)
+	    cat <<EOF_DRIVE
+${drive}
+  ${drive}1 UEFI
+  ${drive}2 ZFS pool
+EOF_DRIVE
+	    targets+=(${drive}2)
+	    ;;
+    esac
 done
 
 cat <<EOF_DRIVE_FOOTER
@@ -137,7 +140,27 @@ cat <<EOF_DRIVE_FOOTER
 
 EOF_DRIVE_FOOTER
 
+case "${#drives[@]}" in
+    1)
+	zpool_type="Single drive pool"
+	zpool_target="${targets[@]}"
+	;;
+    2)
+	zpool_type="Mirror pool"
+	zpool_target="mirror ${targets[@]}"
+	;;
+    3)
+	zpool_type="RAIDZ pool"
+	zpool_target="raidz ${targets[@]}"
+	;;
+    4)
+	zpool_type="RAIDZ2 pool"
+	zpool_target="raidz2 ${targets[@]}"
+	;;
+esac
+
 echo Make $zpool_type
+echo Make $zpool_target
 
 echo -n "Last chance. Are you sure? [yes/NO]"
 read answer
@@ -169,11 +192,23 @@ if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
 fi
 unzip refind-bin-${refind_ver}.zip
 
-# destroy existing ZFS pool
+# detroy existing ZFS pool
 zpool destroy tank
 
 # setup GPT on target drive
 for drive in ${drives[@]}; do
+    case "$drive" in
+	sd*)
+	    efi="${drive}1"
+	    ;;
+	nvme*)
+	    efi="${drive}p1"
+	    ;;
+	*)
+	    efi="${drive}1"
+	    ;;
+    esac
+
     sgdisk --zap-all /dev/$drive
     sgdisk --clear /dev/$drive
     sgdisk --new=1:1M:+512M --typecode=1:EF00 /dev/$drive
@@ -185,7 +220,7 @@ for drive in ${drives[@]}; do
     #sgdisk -n 2:0:-1G -t 2:8300 /dev/$drive # Linux Filesystem
 
     # create EFI boot partition
-    mkdosfs -F 32 -s 1 -n EFI /dev/${drive}1
+    mkdosfs -F 32 -s 1 -n EFI /dev/${efi}
     #mkfs.vfat -F32 /dev/${drive}1
 
     gdisk -l /dev/$drive
@@ -278,8 +313,20 @@ EOF_CONF
 nano /tmp/refind.conf
 
 for drive in ${drives[@]}; do
+    case "$drive" in
+	sd*)
+	    efi="${drive}1"
+	    ;;
+	nvme*)
+	    efi="${drive}p1"
+	    ;;
+	*)
+	    efi="${drive}1"
+	    ;;
+    esac
+
     mkdir /tmp/root/boot/efi_${drive} || true
-    mount /dev/${drive}1 /tmp/root/boot/efi_${drive}
+    mount /dev/${efi} /tmp/root/boot/efi_${drive}
 
     mkdir -p /tmp/root/boot/efi_${drive}/efi/boot
 
@@ -293,7 +340,7 @@ for drive in ${drives[@]}; do
 
     umount /tmp/root/boot/efi_${drive}
 
-    uuid=$(blkid -o value -s UUID /dev/${drive}1)
+    uuid=$(blkid -o value -s UUID /dev/${efi})
     echo UUID=$uuid /boot/efi_$drive vfat defaults 0 0 >> /tmp/root/etc/fstab
 done
 
