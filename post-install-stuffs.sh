@@ -8,7 +8,7 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 cp $SCRIPT_DIR/update-refind.sh /boot
 
-cat << EOF > /etc/systemd/system/update-refind.service 
+cat << EOF > /etc/systemd/system/update-refind.service
 [Unit]
 # Execute command before shutdown/reboot [duplicate]
 # https://askubuntu.com/questions/416299/execute-command-before-shutdown-reboot
