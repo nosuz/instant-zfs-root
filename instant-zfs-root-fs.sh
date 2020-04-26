@@ -15,21 +15,45 @@ refind_ver='0.12.0'
 
 single_fs=0
 
+# define usage
+usage(){
+    cat <<EOF_HELP
+-s  Single ZFS filesystem. /(root) and /home are placed
+    on the same filesystem.
+
+-y  Accept all program's default values. No interaction.
+
+specify ZFS drives:
+	-- drive1 drive2
+
+EOF_HELP
+}
+
 while getopts "hs" opt; do
     case "$opt" in
 	h)
-	    cat <<EOF_HELP
--s            Single ZFS filesystem. /(root) and /home are placed
-              on the same filesystem.
-
--y            Accept all program's default values. No interaction.
-
-EOF_HELP
+	    usage
 	    ;;
 	s)
 	    single_fs=1
 	    ;;
     esac
+done
+
+# https://blog.sleeplessbeastie.eu/2019/08/19/how-to-specify-the-same-option-multiple-times-using-bash/
+
+# shift options/arguments list
+shift $(($OPTIND - 1))
+echo $OPTIND
+
+# parse additional arguments
+zfs_drives=()
+while [ "$#" -gt "0" ]; do
+    dev=$(basename $1)
+    if [[ -b /dev/$dev ]]; then
+	zfs_drives+=($dev)
+    fi
+    shift
 done
 
 # get Ubuntu Release
@@ -83,9 +107,15 @@ fi
 root_drive=$(mount | grep ' / ' | awk '{print $1}' | sed -e 's/[0-9]$//')
 
 drives=()
-while read drive; do
-    drives+=(${drive##/dev/})
-done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9]|grep -v $root_drive)
+if (( ${#zfs_drives[@]} == 0 )); then
+    while read drive; do
+	drives+=(${drive##/dev/})
+    done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9]|grep -v $root_drive)
+else
+    for drive in ${zfs_drives[@]}; do
+	drives+=($drive)
+    done
+fi
 if (( ${#drives[@]} == 0 )); then
     echo No drives for ZFS
     exit
