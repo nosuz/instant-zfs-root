@@ -190,7 +190,7 @@ if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
 	exit
     fi
 fi
-unzip refind-bin-${refind_ver}.zip
+unzip refind-bin-${refind_ver}.zip > /dev/null
 
 # detroy existing ZFS pool
 zpool destroy tank
