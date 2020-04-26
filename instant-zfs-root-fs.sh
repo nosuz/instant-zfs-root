@@ -349,7 +349,7 @@ menuentry "Ubuntu ZFS" {
     graphics on
     loader /vmlinuz-${kernel}
     initrd /initrd.img-${kernel}
-    options "root=ZFS=$zfs_pool/$subvol/root quiet"
+    options "ro root=ZFS=$zfs_pool/$subvol/root quiet"
 }
 EOF_CONF
 
