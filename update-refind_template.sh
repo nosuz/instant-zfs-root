@@ -70,7 +70,7 @@ menuentry "Ubuntu ZFS" {
     graphics on
     loader /$kernel
     initrd /$initrd
-    options "root=ZFS=tank/UBUNTU/root quiet"
+    options "root=ZFS=__ZFS_POOL__/UBUNTU/root quiet"
 }
 
 EOF

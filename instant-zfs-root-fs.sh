@@ -9,19 +9,29 @@
 # http://sourceforge.net/projects/refind/files/
 refind_ver='0.12.0'
 
+# ZFS default pool name
+zfs_pool='tank'
 
 # grant by ROOT is required
 (( $EUID != 0 )) && exec sudo "$0" "$@"
+
+# https://qiita.com/koara-local/items/2d67c0964188bba39e29
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 single_fs=0
 
 # define usage
 usage(){
     cat <<EOF_HELP
--s  Single ZFS filesystem. /(root) and /home are placed
+-s
+    Single ZFS filesystem. /(root) and /home are placed
     on the same filesystem.
 
--y  Accept all program's default values. No interaction.
+-p  pool_name
+    specify pool name
+
+-y
+    Accept all program's default values. No interaction.
 
 specify ZFS drives:
 	-- drive1 drive2
@@ -29,10 +39,13 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "hs" opt; do
+while getopts "hp:s" opt; do
     case "$opt" in
 	h)
 	    usage
+	    ;;
+	p)
+	    zfs_pool=$OPTARG
 	    ;;
 	s)
 	    single_fs=1
@@ -223,7 +236,7 @@ fi
 unzip refind-bin-${refind_ver}.zip > /dev/null
 
 # detroy existing ZFS pool
-zpool destroy tank
+zpool destroy $zfs_pool
 
 # setup GPT on target drive
 for drive in ${drives[@]}; do
@@ -258,71 +271,71 @@ done
 
 # create ZFS pool
 # all ZFS features are enabled by default
-zpool create -f -o ashift=12 -o autoexpand=on -O atime=off tank ${zpool_target}
+zpool create -f -o ashift=12 -o autoexpand=on -O atime=off $zfs_pool ${zpool_target}
 
 # conver name from sdX to drive ID
-zpool export tank
-zpool import -d /dev/disk/by-id tank
+zpool export $zfs_pool
+zpool import -d /dev/disk/by-id $zfs_pool
 zpool status
 
 # make subvolume for /(root)
-zfs create tank/$subvol
-zfs create tank/$subvol/root
+zfs create $zfs_pool/$subvol
+zfs create $zfs_pool/$subvol/root
 if (( $single_fs != 1 )); then
     # make subvolume for /home and copy on it.
-    zfs create tank/$subvol/home
+    zfs create $zfs_pool/$subvol/home
 fi
 zfs list
 
 # copy system files
 mount --bind / /mnt
 echo ""
-echo "Copying / to /tank/$subvol/root. This takes for a few minutes."
-rsync --info=progress2 -a --exclude=/home /mnt/ /tank/$subvol/root
+echo "Copying / to /$zfs_pool/$subvol/root. This takes for a few minutes."
+rsync --info=progress2 -a --exclude=/home /mnt/ /$zfs_pool/$subvol/root
 umount /mnt
 
 # create home directory
-mkdir /tank/$subvol/root/home
-chmod 755 /tank/$subvol/root/home
+mkdir /$zfs_pool/$subvol/root/home
+chmod 755 /$zfs_pool/$subvol/root/home
 
-echo "Copying /home to /tank/ROOT/home."
+echo "Copying /home to /$zfs_pool/ROOT/home."
 if (( $single_fs == 1 )); then
-    rsync --info=progress2 -a /home/ /tank/$subvol/root/home
+    rsync --info=progress2 -a /home/ /$zfs_pool/$subvol/root/home
 else
-    rsync --info=progress2 -a /home/ /tank/$subvol/home
-    zfs set mountpoint=/home tank/$subvol/home
+    rsync --info=progress2 -a /home/ /$zfs_pool/$subvol/home
+    zfs set mountpoint=/home $zfs_pool/$subvol/home
 fi
 
 # edit /etc/fstab
-sed -e '/^#/! s/^/#/' /tank/$subvol/root/etc/fstab > /tank/$subvol/root/etc/fstab.new
-mv /tank/$subvol/root/etc/fstab.new /tank/$subvol/root/etc/fstab
+sed -e '/^#/! s/^/#/' /$zfs_pool/$subvol/root/etc/fstab > /$zfs_pool/$subvol/root/etc/fstab.new
+mv /$zfs_pool/$subvol/root/etc/fstab.new /$zfs_pool/$subvol/root/etc/fstab
 # comment out all
-#nano /tank/$subvol/root/etc/fstab
+#nano /$zfs_pool/$subvol/root/etc/fstab
 
 # remove zpool.cache to accept zpool struct change
-rm /tank/$subvol/root/etc/zfs/zpool.cache
+rm /$zfs_pool/$subvol/root/etc/zfs/zpool.cache
 
 # update initiramfs
 for d in proc sys dev;do
     echo "mount $d"
-    mount --bind /$d /tank/$subvol/root/$d
+    mount --bind /$d /$zfs_pool/$subvol/root/$d
 done
 
-mkdir /tank/$subvol/root/boot/efi || true
-chroot /tank/$subvol/root update-initramfs -u -k all
+mkdir /$zfs_pool/$subvol/root/boot/efi || true
+chroot /$zfs_pool/$subvol/root update-initramfs -u -k all
 
 for d in proc sys dev;do
     echo "unmount $d"
-    umount /tank/$subvol/root/$d
+    umount /$zfs_pool/$subvol/root/$d
 done
 
 # set mountpoint for root
-zfs set mountpoint=/ tank/$subvol/root
-zfs set mountpoint=none tank/$subvol
-zfs set mountpoint=none tank
+zfs set mountpoint=/ $zfs_pool/$subvol/root
+zfs set mountpoint=none $zfs_pool/$subvol
+zfs set mountpoint=none $zfs_pool
 
 mkdir /tmp/root
-mount -t zfs -o zfsutil tank/$subvol/root /tmp/root
+mount -t zfs -o zfsutil $zfs_pool/$subvol/root /tmp/root
 
 kernel=$(uname -r)
 cat > /tmp/refind.conf <<EOF_CONF
@@ -336,11 +349,14 @@ menuentry "Ubuntu ZFS" {
     graphics on
     loader /vmlinuz-${kernel}
     initrd /initrd.img-${kernel}
-    options "root=ZFS=tank/$subvol/root quiet"
+    options "root=ZFS=$zfs_pool/$subvol/root quiet"
 }
 EOF_CONF
 
 nano /tmp/refind.conf
+
+sed -e s/__ZFS_POOL__/$zfs_pool/ $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
+chmod +x $SCRIPT_DIR/update-refind.sh
 
 for drive in ${drives[@]}; do
     case "$drive" in
