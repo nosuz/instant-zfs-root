@@ -16,7 +16,7 @@ echo $kernel
 initrd="initrd.img-${kernel#vmlinuz-}"
 echo $initrd
 
-for efi in $(ls | grep efi_); do
+for efi in $(ls -d efi_*); do
     echo $efi
 
     # make sure EFI partition is mounted
