@@ -216,7 +216,7 @@ fi
 
 apt update
 # install packges if some are missing
-apt install -y zfsutils-linux zfs-initramfs gdisk zip
+apt install -y zfsutils-linux zfs-initramfs gdisk zip efibootmgr
 apt remove -y cryptsetup-initramfs
 
 if [[ -d refind-bin-${refind_ver} ]]; then
@@ -389,6 +389,11 @@ for drive in ${drives[@]}; do
 
     uuid=$(blkid -o value -s UUID /dev/${efi})
     echo UUID=$uuid /boot/efi_$drive vfat defaults 0 0 >> /tmp/root/etc/fstab
+done
+
+# setup EFI boot order
+for (( i=${#drives[@]}-1; i>=0; i--)); do
+    efibootmgr -c -d /dev/${drives[i]} -p 1 -l '\efi\boot\bootx64.efi' -L "$distri ZFS"
 done
 
 # show final message
