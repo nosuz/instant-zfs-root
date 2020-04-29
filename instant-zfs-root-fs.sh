@@ -287,6 +287,10 @@ if (( $single_fs != 1 )); then
 fi
 zfs list
 
+# create update-refind.sh from template
+sed -e s/__ZFS_POOL__/$zfs_pool/ $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
+chmod +x $SCRIPT_DIR/update-refind.sh
+
 # copy system files
 mount --bind / /mnt
 echo ""
@@ -354,9 +358,6 @@ menuentry "Ubuntu ZFS" {
 EOF_CONF
 
 nano /tmp/refind.conf
-
-sed -e s/__ZFS_POOL__/$zfs_pool/ $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
-chmod +x $SCRIPT_DIR/update-refind.sh
 
 for drive in ${drives[@]}; do
     case "$drive" in
