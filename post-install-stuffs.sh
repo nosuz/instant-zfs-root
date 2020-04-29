@@ -6,6 +6,11 @@
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
+if [[ ! -e $SCRIPT_DIR/update-refind.sh ]]; then
+    echo Doesn\'t exist update-refind.sh in $SCRIPT_DIR.
+    exit
+fi
+
 cp $SCRIPT_DIR/update-refind.sh /boot
 
 cat << EOF > /etc/systemd/system/update-refind.service
