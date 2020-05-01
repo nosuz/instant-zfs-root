@@ -393,7 +393,8 @@ done
 
 # setup EFI boot order
 for (( i=${#drives[@]}-1; i>=0; i--)); do
-    efibootmgr -c -d /dev/${drives[i]} -p 1 -l '\efi\boot\bootx64.efi' -L "$distri ZFS"
+    serial=$(lsblk -dno MODEL,SERIAL /dev/${drives[i]} | sed -e 's/ \+/_/g')
+    efibootmgr -c -d /dev/${drives[i]} -p 1 -l '\efi\boot\bootx64.efi' -L "$distri ZFS $serial"
 done
 
 # show final message
