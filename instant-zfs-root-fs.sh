@@ -264,7 +264,7 @@ for drive in ${drives[@]}; do
 
     # create EFI boot partition
     mkdosfs -F 32 -s 1 -n EFI /dev/${efi}
-    #mkfs.vfat -F32 /dev/${drive}1
+    #mkfs.vfat -F 32 -s 1 -n EFI /dev/${efi}
 
     gdisk -l /dev/$drive
 done
