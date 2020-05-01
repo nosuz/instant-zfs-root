@@ -295,7 +295,7 @@ chmod +x $SCRIPT_DIR/update-refind.sh
 mount --bind / /mnt
 echo ""
 echo "Copying / to /$zfs_pool/$subvol/root. This takes for a few minutes."
-rsync --info=progress2 -a --exclude=/home /mnt/ /$zfs_pool/$subvol/root
+rsync --info=progress2 -ax --exclude=/home /mnt/ /$zfs_pool/$subvol/root
 umount /mnt
 
 # create home directory
