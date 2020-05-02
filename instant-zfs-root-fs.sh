@@ -19,19 +19,20 @@ zfs_pool='tank'
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 single_fs=0
+no_interact=0
 
 # define usage
 usage(){
     cat <<EOF_HELP
+-p  pool_name
+    specify pool name
+
 -s
     Single ZFS filesystem. /(root) and /home are placed
     on the same filesystem.
 
--p  pool_name
-    specify pool name
-
 -y
-    Accept all program's default values. No interaction.
+    Skip editing /etc/fstab file.
 
 specify ZFS drives:
 	-- drive1 drive2
@@ -39,7 +40,7 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "hp:s" opt; do
+while getopts "hp:sy" opt; do
     case "$opt" in
 	h)
 	    usage
@@ -49,6 +50,9 @@ while getopts "hp:s" opt; do
 	    ;;
 	s)
 	    single_fs=1
+	    ;;
+	y)
+	    no_interact=1
 	    ;;
     esac
 done
@@ -310,11 +314,14 @@ else
     zfs set mountpoint=/home $zfs_pool/$subvol/home
 fi
 
-# edit /etc/fstab
+# comment out all
 sed -i.orig -e '/^#/! s/^/#/' /$zfs_pool/$subvol/root/etc/fstab
 echo LABEL=EFI /boot/efi vfat defaults 0 0 >> /$zfs_pool/$subvol/root/etc/fstab
-# comment out all
-#nano /$zfs_pool/$subvol/root/etc/fstab
+
+if (( $no_interact != 1 )); then
+    # edit /etc/fstab
+    nano /$zfs_pool/$subvol/root/etc/fstab
+fi
 
 # remove zpool.cache to accept zpool struct change
 rm /$zfs_pool/$subvol/root/etc/zfs/zpool.cache
@@ -357,7 +364,7 @@ menuentry "Ubuntu ZFS" {
 }
 EOF_CONF
 
-nano /tmp/refind.conf
+cat /tmp/refind.conf
 
 if [[ ! -e /tmp/efi ]]; then
     mkdir /tmp/efi
