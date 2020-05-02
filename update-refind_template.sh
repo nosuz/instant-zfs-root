@@ -16,22 +16,25 @@ echo $kernel
 initrd="initrd.img-${kernel#vmlinuz-}"
 echo $initrd
 
-for efi in $(ls -d efi_*); do
-    echo $efi
+if [[ ! -e /tmp/efi ]]; then
+    mkdir /tmp/efi
+fi
+for uuid in $(lsblk -o LABEL,UUID|grep '^EFI '|awk -e '{print $2}'); do
+    echo $uuid
 
-    # make sure EFI partition is mounted
-    [[ -e $efi/efi ]] || break
+    # mount EFI partition
+    mount UUID=$uuid /tmp/efi
 
     update=false
     src=$(stat -c %Y $kernel)
-    dst=$(stat -c %Y $efi/$kernel 2> /dev/null || echo 0)
+    dst=$(stat -c %Y /tmp/efi/$kernel 2> /dev/null || echo 0)
     if (( $src > $dst )); then
-	cp $kernel $efi
+	cp $kernel /tmp/efi
 	update=true
     fi
 
     # remove purged kernel
-    for installed in $(ls $efi/vmlinuz-*); do
+    for installed in $(ls /tmp/efi/vmlinuz-*); do
 	if [[ ! -e $(basename $installed) ]]; then
 	    rm $installed
 	    echo "Removed $installed"
@@ -39,14 +42,14 @@ for efi in $(ls -d efi_*); do
     done
 
     src=$(stat -c %Y $initrd)
-    dst=$(stat -c %Y $efi/$initrd 2> /dev/null || echo 0)
+    dst=$(stat -c %Y /tmp/efi/$initrd 2> /dev/null || echo 0)
     if (( $src > $dst )); then
-	cp $initrd $efi
+	cp $initrd /tmp/efi
 	update=true
     fi
 
     # remove purged initrd
-    for installed in $(ls $efi/initrd.img-*); do
+    for installed in $(ls /tmp/efi/initrd.img-*); do
 	if [[ ! -e $(basename $installed) ]]; then
 	    rm $installed
 	    echo "Removed $installed"
@@ -55,11 +58,11 @@ for efi in $(ls -d efi_*); do
 
     if $update; then
 	echo "Update refind.conf"
-	if [[ -f $efi/efi/boot/refind.conf ]]; then
-	    mv $efi/efi/boot/refind.conf $efi/efi/boot/refind.conf.bak
+	if [[ -f /tmp/efi/efi/boot/refind.conf ]]; then
+	    mv /tmp/efi/efi/boot/refind.conf /tmp/efi/efi/boot/refind.conf.bak
 	fi
 
-	cat << EOF > $efi/efi/boot/refind.conf
+	cat << EOF > /tmp/efi/efi/boot/refind.conf
 timeout 5
 icons_dir EFI/boot/icons/
 scanfor manual
@@ -75,4 +78,6 @@ menuentry "Ubuntu ZFS" {
 
 EOF
     fi
+
+    umount /tmp/efi
 done

@@ -311,8 +311,8 @@ else
 fi
 
 # edit /etc/fstab
-sed -e '/^#/! s/^/#/' /$zfs_pool/$subvol/root/etc/fstab > /$zfs_pool/$subvol/root/etc/fstab.new
-mv /$zfs_pool/$subvol/root/etc/fstab.new /$zfs_pool/$subvol/root/etc/fstab
+sed -i.orig -e '/^#/! s/^/#/' /$zfs_pool/$subvol/root/etc/fstab
+echo LABEL=EFI /boot/efi vfat defaults 0 0 >> /$zfs_pool/$subvol/root/etc/fstab
 # comment out all
 #nano /$zfs_pool/$subvol/root/etc/fstab
 
@@ -359,6 +359,9 @@ EOF_CONF
 
 nano /tmp/refind.conf
 
+if [[ ! -e /tmp/efi ]]; then
+    mkdir /tmp/efi
+fi
 for drive in ${drives[@]}; do
     case "$drive" in
 	sd*)
@@ -372,23 +375,19 @@ for drive in ${drives[@]}; do
 	    ;;
     esac
 
-    mkdir /tmp/root/boot/efi_${drive} || true
-    mount /dev/${efi} /tmp/root/boot/efi_${drive}
+    mount /dev/${efi} /tmp/efi
 
-    mkdir -p /tmp/root/boot/efi_${drive}/efi/boot
+    mkdir -p /tmp/efi/efi/boot
 
-    cp -r refind-bin-${refind_ver}/refind/* /tmp/root/boot/efi_${drive}/efi/boot/
-    cp refind-bin-${refind_ver}/refind/refind_x64.efi /tmp/root/boot/efi_${drive}/efi/boot/bootx64.efi
+    cp -r refind-bin-${refind_ver}/refind/* /tmp/efi/efi/boot/
+    cp refind-bin-${refind_ver}/refind/refind_x64.efi /tmp/efi/efi/boot/bootx64.efi
 
-    cp /tmp/root/boot/initrd.img-$kernel /tmp/root/boot/efi_${drive}/
-    cp /tmp/root/boot/vmlinuz-$kernel /tmp/root/boot/efi_${drive}/
+    cp /tmp/root/boot/initrd.img-$kernel /tmp/efi/
+    cp /tmp/root/boot/vmlinuz-$kernel /tmp/efi/
 
-    cp /tmp/refind.conf /tmp/root/boot/efi_${drive}/efi/boot/refind.conf
+    cp /tmp/refind.conf /tmp/efi/efi/boot/refind.conf
 
-    umount /tmp/root/boot/efi_${drive}
-
-    uuid=$(blkid -o value -s UUID /dev/${efi})
-    echo UUID=$uuid /boot/efi_$drive vfat defaults 0 0 >> /tmp/root/etc/fstab
+    umount /tmp/efi
 done
 
 # setup EFI boot order
