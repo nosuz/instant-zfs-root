@@ -329,7 +329,7 @@ rm /$zfs_pool/$subvol/root/etc/zfs/zpool.cache
 # update initiramfs
 for d in proc sys dev;do
     echo "mount $d"
-    mount --bind /$d /$zfs_pool/$subvol/root/$d
+    mount --rbind /$d /$zfs_pool/$subvol/root/$d
 done
 
 mkdir /$zfs_pool/$subvol/root/boot/efi || true
@@ -337,7 +337,7 @@ chroot /$zfs_pool/$subvol/root update-initramfs -u -k all
 
 for d in proc sys dev;do
     echo "unmount $d"
-    umount /$zfs_pool/$subvol/root/$d
+    umount -lf /$zfs_pool/$subvol/root/$d
 done
 
 # set mountpoint for root
