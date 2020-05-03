@@ -20,12 +20,16 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 single_fs=0
 no_interact=0
+do_reboot=0
 
 # define usage
 usage(){
     cat <<EOF_HELP
 -p  pool_name
     specify pool name
+
+-R
+    Reboot automatically when prepared ZFS root filesystem.
 
 -s
     Single ZFS filesystem. /(root) and /home are placed
@@ -40,13 +44,16 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "hp:sy" opt; do
+while getopts "hp:Rsy" opt; do
     case "$opt" in
 	h)
 	    usage
 	    ;;
 	p)
 	    zfs_pool=$OPTARG
+	    ;;
+	R)
+	    do_reboot=1
 	    ;;
 	s)
 	    single_fs=1
@@ -209,7 +216,7 @@ esac
 echo Make $zpool_type
 echo Make $zpool_target
 
-echo -n "Last chance. Are you sure? [yes/NO]"
+echo -n "Last chance. Are you sure? [yes/NO] "
 read answer
 if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
     echo "make ZFS root on /dev/${drive[0]}"
@@ -421,24 +428,26 @@ for (( i=${#drives[@]}-1; i>=0; i--)); do
 done
 
 # show final message
-cat <<EOF_MSG1
+cat <<EOF_MSG
 
 -*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*-
 
 Finised
 
 Next:
- 1. Shutdown system.
- 2. Remove current root fs drive.
- 3. Reboot
-EOF_MSG1
-
-if [[ ! -e /sys/firmware/efi ]]; then
-    echo "      Make sure to boot from UEFI. This system didn't boot from UEFI."
-fi
-
-cat <<EOF_MSG2
- 4. (Optional) Run post-install-stuffs.sh to remobe GRUB and install update-refind service.
+ 1. Reboot
+ 2. Run post-install-stuffs.sh to install update-refind service.
 
 -*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*-
-EOF_MSG2
+
+EOF_MSG
+
+if (( $do_reboot == 1 )); then
+    reboot
+else
+    echo -n "Reboot now? [yes/NO] "
+    read answer
+    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+	reboot
+    fi
+fi
