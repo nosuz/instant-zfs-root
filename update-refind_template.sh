@@ -24,6 +24,10 @@ for uuid in $(lsblk -o LABEL,UUID|grep '^EFI '|awk -e '{print $2}'); do
 
     # mount EFI partition
     mount UUID=$uuid /tmp/efi
+    if [[ ! -e /tmp/efi/efi/boot/refind.conf ]]; then
+	echo $uuid is not refind bootable partition.
+	continue
+    fi
 
     update=false
     src=$(stat -c %Y $kernel)
