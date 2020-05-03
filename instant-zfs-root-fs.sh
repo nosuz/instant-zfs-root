@@ -239,6 +239,23 @@ if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
 fi
 unzip refind-bin-${refind_ver}.zip > /dev/null
 
+# install udev rules
+# make link to the member of ZFS in /dev
+if [[ ! -e /etc/udev/rules.d/91-zfs-vdev.rules ]] ; then
+        cat > /etc/udev/rules.d/91-zfs-vdev.rules <<EOF_UDEV
+# HOWTO install Ubuntu 14.04 or Later to a Native ZFS Root Filesystem
+# https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-install-Ubuntu-14.04-or-Later
+-to-a-Native-ZFS-Root-Filesystem
+
+# Create a by-id style link in /dev for zfs_member vdev. Needed by boot
+KERNEL=="sd*[0-9]|nvme[0-9]n[0-9]p[0-9]", ENV{ID_FS_TYPE}=="zfs_member", SYMLINK+="\$env{ID_BUS}-\$env{ID_SERIAL}-part%n", SYMLINK+="disk/zfs/\$env{ID_BUS}-\$env{ID_SERIAL}-part%n"
+EOF_UDEV
+fi
+
+# apply udev rules and make symlinks for ZFS drives
+udevadm control --reload
+udevadm trigger
+
 # detroy existing ZFS pool
 zpool destroy $zfs_pool
 
@@ -277,9 +294,9 @@ done
 # all ZFS features are enabled by default
 zpool create -f -o ashift=12 -o autoexpand=on -O atime=off $zfs_pool ${zpool_target}
 
-# conver name from sdX to drive ID
+# convet name from sdX to drive ID
 zpool export $zfs_pool
-zpool import -d /dev/disk/by-id $zfs_pool
+zpool import -d /dev/disk/zfs $zfs_pool
 zpool status
 
 # make subvolume for /(root)
