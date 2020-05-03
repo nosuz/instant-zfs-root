@@ -6,6 +6,9 @@
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
+# cancel autorun on reboot
+crontab -l | sed -e "/^@reboot $SCRIPT_DIR\//s/^/#/"| awk '!a[$0]++' | crontab -
+
 if [[ ! -e $SCRIPT_DIR/update-refind.sh ]]; then
     echo Doesn\'t exist update-refind.sh in $SCRIPT_DIR.
     exit

@@ -319,12 +319,18 @@ zfs list
 sed -e s/__ZFS_POOL__/$zfs_pool/ $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
 chmod +x $SCRIPT_DIR/update-refind.sh
 
+# run post install script at the next boot.
+crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh";) | crontab -
+
 # copy system files
 mount --bind / /mnt
 echo ""
 echo "Copying / to /$zfs_pool/$subvol/root. This takes for a few minutes."
 rsync --info=progress2 -ax --exclude=/home /mnt/ /$zfs_pool/$subvol/root
 umount /mnt
+
+# cancel autorun on reboot
+crontab -l | sed -e "/^@reboot $SCRIPT_DIR\//s/^/#/"| awk '!a[$0]++' | crontab -
 
 # create home directory
 mkdir /$zfs_pool/$subvol/root/home
@@ -428,20 +434,7 @@ for (( i=${#drives[@]}-1; i>=0; i--)); do
 done
 
 # show final message
-cat <<EOF_MSG
-
--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*-
-
-Finised
-
-Next:
- 1. Reboot
- 2. Run post-install-stuffs.sh to install update-refind service.
-
--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*--*-*-*-*-*-*-
-
-EOF_MSG
-
+echo Finished.
 if (( $do_reboot == 1 )); then
     reboot
 else
