@@ -134,7 +134,7 @@ drives=()
 if (( ${#zfs_drives[@]} == 0 )); then
     while read drive; do
 	drives+=(${drive##/dev/})
-    done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9]|grep -v $root_drive)
+    done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9] 2> /dev/null |grep -v $root_drive)
 else
     for drive in ${zfs_drives[@]}; do
 	drives+=($drive)
