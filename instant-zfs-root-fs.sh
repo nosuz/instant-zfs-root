@@ -11,6 +11,7 @@ refind_ver='0.12.0'
 
 # ZFS default pool name
 zfs_pool='tank'
+altroot='/tmp/root'
 
 # grant by ROOT is required
 (( $EUID != 0 )) && exec sudo "$0" "$@"
@@ -297,22 +298,33 @@ for drive in ${drives[@]}; do
     gdisk -l /dev/$drive
 done
 
+[[ -e $altroot ]] && rm -rf $altroot
+mkdir $altroot
+
 # create ZFS pool
 # all ZFS features are enabled by default
-zpool create -f -o ashift=12 -o autoexpand=on -O atime=off $zfs_pool ${zpool_target}
-
-# convet name from sdX to drive ID
-zpool export $zfs_pool
-zpool import -d /dev/disk/zfs $zfs_pool
-zpool status
+zpool create -R $altroot -f -o ashift=12 -o autoexpand=on -O atime=off $zfs_pool ${zpool_target}
 
 # make subvolume for /(root)
-zfs create $zfs_pool/$subvol
-zfs create $zfs_pool/$subvol/root
+zfs create -o mountpoint=none $zfs_pool/$subvol
+zfs create -o mountpoint=/ $zfs_pool/$subvol/root
 if (( $single_fs != 1 )); then
     # make subvolume for /home and copy on it.
-    zfs create $zfs_pool/$subvol/home
+    zfs create -o mountpoint=/home $zfs_pool/$subvol/home
 fi
+zfs set mountpoint=none $zfs_pool
+
+# convert name from sdX to drive ID
+zpool export $zfs_pool
+sleep 5 # wait to come up dist/zfs
+
+[[ -e $altroot ]] && rm -rf $altroot
+mkdir $altroot
+echo Made fresh $altroot
+
+zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
+zpool status
+
 zfs list
 
 # create update-refind.sh from template
@@ -323,26 +335,15 @@ chmod +x $SCRIPT_DIR/update-refind.sh
 crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh";) | crontab -
 
 # copy system files
-mount --bind / /mnt
 echo ""
-echo "Copying / to /$zfs_pool/$subvol/root. This takes for a few minutes."
-rsync --info=progress2 -ax --exclude=/home /mnt/ /$zfs_pool/$subvol/root
-umount /mnt
+echo "Copying / to $altroot. This takes for a few minutes."
+rsync --info=progress2 -ax --exclude=/home --exclude=$altroot --exclude=/tmp / $altroot
 
 # cancel autorun on reboot
 crontab -l | sed -e "/^@reboot $SCRIPT_DIR\//s/^/#/"| awk '!a[$0]++' | crontab -
 
-# create home directory
-mkdir /$zfs_pool/$subvol/root/home
-chmod 755 /$zfs_pool/$subvol/root/home
-
-echo "Copying /home to /$zfs_pool/ROOT/home."
-if (( $single_fs == 1 )); then
-    rsync --info=progress2 -a /home/ /$zfs_pool/$subvol/root/home
-else
-    rsync --info=progress2 -a /home/ /$zfs_pool/$subvol/home
-    zfs set mountpoint=/home $zfs_pool/$subvol/home
-fi
+echo "Copying /home to $altroot/home."
+rsync --info=progress2 -a /home/ $altroot/home
 
 # comment out all
 sed -i.orig -e '/^#/!s/^/#/' $altroot/etc/fstab
@@ -350,33 +351,24 @@ echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
 
 if (( $no_interact != 1 )); then
     # edit /etc/fstab
-    nano /$zfs_pool/$subvol/root/etc/fstab
+    nano $altroot/etc/fstab
 fi
 
 # remove zpool.cache to accept zpool struct change
-rm /$zfs_pool/$subvol/root/etc/zfs/zpool.cache
+rm $altroot/etc/zfs/zpool.cache
 
 # update initiramfs
 for d in proc sys dev;do
     echo "mount $d"
-    mount --rbind /$d /$zfs_pool/$subvol/root/$d
+    mount --rbind /$d $altroot/$d
 done
 
-mkdir /$zfs_pool/$subvol/root/boot/efi || true
-chroot /$zfs_pool/$subvol/root update-initramfs -u -k all
+chroot $altroot update-initramfs -u -k all
 
 for d in proc sys dev;do
     echo "unmount $d"
-    umount -lf /$zfs_pool/$subvol/root/$d
+    umount -lf $altroot/$d
 done
-
-# set mountpoint for root
-zfs set mountpoint=/ $zfs_pool/$subvol/root
-zfs set mountpoint=none $zfs_pool/$subvol
-zfs set mountpoint=none $zfs_pool
-
-mkdir /tmp/root
-mount -t zfs -o zfsutil $zfs_pool/$subvol/root /tmp/root
 
 kernel=$(uname -r)
 cat > /tmp/refind.conf <<EOF_CONF
@@ -419,8 +411,8 @@ for drive in ${drives[@]}; do
     cp -r refind-bin-${refind_ver}/refind/* /tmp/efi/efi/boot/
     cp refind-bin-${refind_ver}/refind/refind_x64.efi /tmp/efi/efi/boot/bootx64.efi
 
-    cp /tmp/root/boot/initrd.img-$kernel /tmp/efi/
-    cp /tmp/root/boot/vmlinuz-$kernel /tmp/efi/
+    cp $altroot/boot/initrd.img-$kernel /tmp/efi/
+    cp $altroot/boot/vmlinuz-$kernel /tmp/efi/
 
     cp /tmp/refind.conf /tmp/efi/efi/boot/refind.conf
 
