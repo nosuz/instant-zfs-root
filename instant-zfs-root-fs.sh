@@ -345,8 +345,8 @@ else
 fi
 
 # comment out all
-sed -i.orig -e '/^#/! s/^/#/' /$zfs_pool/$subvol/root/etc/fstab
-echo LABEL=EFI /boot/efi vfat defaults 0 0 >> /$zfs_pool/$subvol/root/etc/fstab
+sed -i.orig -e '/^#/!s/^/#/' $altroot/etc/fstab
+echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
 
 if (( $no_interact != 1 )); then
     # edit /etc/fstab
