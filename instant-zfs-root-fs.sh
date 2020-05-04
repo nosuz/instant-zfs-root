@@ -86,7 +86,7 @@ distri=$(lsb_release -i | awk '{print $3}')
 release=$(lsb_release -r | awk '{print $2}')
 case "$distri" in
     "Ubuntu")
-	subvol="Ubuntu"
+	subvol="UBUNTU"
 	case "$release" in
 	    19.04)
 		:
@@ -104,7 +104,7 @@ case "$distri" in
 	esac
 	;;
     "LinuxMint")
-	subvol="Mint"
+	subvol="MINT"
 	case "$release" in
 	    19.3)
 		:
