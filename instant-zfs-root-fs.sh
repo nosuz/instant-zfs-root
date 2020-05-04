@@ -419,6 +419,8 @@ for drive in ${drives[@]}; do
     umount /tmp/efi
 done
 
+zpool export $zfs_pool
+
 # setup EFI boot order
 for (( i=${#drives[@]}-1; i>=0; i--)); do
     serial=$(lsblk -dno MODEL,SERIAL /dev/${drives[i]} | sed -e 's/ \+/_/g')
