@@ -346,7 +346,7 @@ echo "Copying /home to $altroot/home."
 rsync --info=progress2 -a /home/ $altroot/home
 
 # comment out all
-sed -i.orig -e '/^#/!s/^/#/' $altroot/etc/fstab
+sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
 echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
 
 if (( $no_interact != 1 )); then
@@ -386,6 +386,12 @@ menuentry "Ubuntu ZFS" {
 }
 EOF_CONF
 
+cat <<EOF > $altroot/boot/current_ver.sh
+prev_kernel=vmlinuz-${kernel}
+prev_initrd=initrd.img-${kernel}
+
+EOF
+
 cat /tmp/refind.conf
 
 if [[ ! -e /tmp/efi ]]; then
@@ -414,7 +420,7 @@ for drive in ${drives[@]}; do
     cp $altroot/boot/initrd.img-$kernel /tmp/efi/
     cp $altroot/boot/vmlinuz-$kernel /tmp/efi/
 
-    cp /tmp/refind.conf /tmp/efi/efi/boot/refind.conf
+    cp /tmp/refind.conf /tmp/efi/efi/boot/
 
     umount /tmp/efi
 done
