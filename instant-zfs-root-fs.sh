@@ -303,7 +303,7 @@ mkdir $altroot
 
 # create ZFS pool
 # all ZFS features are enabled by default
-zpool create -R $altroot -f -o ashift=12 -o autoexpand=on -O atime=off $zfs_pool ${zpool_target}
+zpool create -R $altroot -f -o ashift=12 -o autoexpand=on -O atime=off -O mountpoint=none $zfs_pool ${zpool_target}
 
 # make subvolume for /(root)
 zfs create -o mountpoint=none $zfs_pool/$subvol
@@ -312,7 +312,6 @@ if (( $single_fs != 1 )); then
     # make subvolume for /home and copy on it.
     zfs create -o mountpoint=/home $zfs_pool/$subvol/home
 fi
-zfs set mountpoint=none $zfs_pool
 
 # convert name from sdX to drive ID
 zpool export $zfs_pool
