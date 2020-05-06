@@ -370,7 +370,7 @@ for d in proc sys dev;do
     umount -lfR $altroot/$d
 done
 
-kernel=$(uname -r)
+this_rel=$(uname -r)
 cat > /tmp/refind.conf <<EOF_CONF
 timeout 10
 icons_dir EFI/boot/icons/
@@ -380,13 +380,13 @@ scan_all_linux_kernels false
 menuentry "Ubuntu ZFS" {
     ostype Linux
     graphics on
-    loader /vmlinuz-${kernel}
-    initrd /initrd.img-${kernel}
+    loader /vmlinuz-${this_rel}
+    initrd /initrd.img-${this_rel}
     options "ro root=ZFS=$zfs_pool/$subvol/root"
 }
 EOF_CONF
 
-echo $kernel > $altroot/boot/prev_release.txt
+echo $this_rel > $altroot/boot/prev_release.txt
 
 cat /tmp/refind.conf
 
@@ -413,8 +413,8 @@ for drive in ${drives[@]}; do
     cp -r refind-bin-${refind_ver}/refind/* /tmp/efi/efi/boot/
     cp refind-bin-${refind_ver}/refind/refind_x64.efi /tmp/efi/efi/boot/bootx64.efi
 
-    cp $altroot/boot/initrd.img-$kernel /tmp/efi/
-    cp $altroot/boot/vmlinuz-$kernel /tmp/efi/
+    cp $altroot/boot/initrd.img-$this_rel /tmp/efi/
+    cp $altroot/boot/vmlinuz-$this_rel /tmp/efi/
 
     cp /tmp/refind.conf /tmp/efi/efi/boot/
 
