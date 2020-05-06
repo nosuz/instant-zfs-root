@@ -386,11 +386,7 @@ menuentry "Ubuntu ZFS" {
 }
 EOF_CONF
 
-cat <<EOF > $altroot/boot/current_ver.sh
-prev_kernel=vmlinuz-${kernel}
-prev_initrd=initrd.img-${kernel}
-
-EOF
+echo $kernel > $altroot/boot/prev_release.txt
 
 cat /tmp/refind.conf
 

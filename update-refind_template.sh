@@ -35,12 +35,10 @@ fi
 
 if $update; then
     echo "Update refind.conf"
-    if [[ -e /boot/current_ver.sh ]]; then
-	. /boot/current_ver.sh
+    if [[ -e /boot/prev_release.txt ]]; then
+	prev_rel=$(cat /boot/prev_release.txt)
     else
 	prev_rel=$(uname -r)
-	prev_kernel=$kernel
-	prev_initrd=$initrd
     fi
 
     cat << EOF > /boot/efi/efi/boot/refind.conf
@@ -56,19 +54,14 @@ menuentry "Ubuntu ZFS" {
     initrd /$initrd
     options "ro root=ZFS=__ZFS_POOL__/UBUNTU/root"
     submenu "boot $prev_rel" {
-        loader /$prev_kernel
-        initrd /$prev_initrd
+        loader /vmlinuz-${prev_rel}
+        initrd /initrd.img-${prev_rel}
     }
 }
 
 EOF
 
-    cat <<EOF > /boot/current_ver.sh
-prev_rel=$(uname -r)
-prev_kernel=$kernel
-prev_initrd=$initrd
-
-EOF
+    uname -r > /boot/prev_release.txt
 fi
 
 
