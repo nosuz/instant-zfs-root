@@ -328,7 +328,7 @@ zpool status
 zfs list
 
 # create update-refind.sh from template
-sed -e s/__ZFS_POOL__/$zfs_pool/ $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
+sed -e "s/__ZFS_POOL__/$zfs_pool/" $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
 chmod +x $SCRIPT_DIR/update-refind.sh
 
 # run post install script at the next boot.
@@ -340,7 +340,7 @@ echo "Copying / to $altroot. This takes for a few minutes."
 rsync --info=progress2 -ax --exclude=/home --exclude=$altroot --exclude=/tmp / $altroot
 
 # cancel autorun on reboot
-crontab -l | sed -e "/^@reboot $SCRIPT_DIR\//s/^/#/"| awk '!a[$0]++' | crontab -
+crontab -l | sed -e "/^@reboot $SCRIPT_DIR\// s/^/#/"| awk '!a[$0]++' | crontab -
 
 echo "Copying /home to $altroot/home."
 rsync --info=progress2 -a /home/ $altroot/home
