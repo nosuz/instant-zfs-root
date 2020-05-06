@@ -356,7 +356,9 @@ if (( $no_interact != 1 )); then
 fi
 
 # remove zpool.cache to accept zpool struct change
-rm $altroot/etc/zfs/zpool.cache
+if [[ -e $altroot/etc/zfs/zpool.cache ]]; then
+    rm $altroot/etc/zfs/zpool.cache
+fi
 
 # update initiramfs
 for d in proc sys dev;do
