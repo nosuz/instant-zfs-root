@@ -367,7 +367,7 @@ chroot $altroot update-initramfs -u -k all
 
 for d in proc sys dev;do
     echo "unmount $d"
-    umount -lf $altroot/$d
+    umount -lfR $altroot/$d
 done
 
 kernel=$(uname -r)
