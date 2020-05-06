@@ -337,7 +337,7 @@ crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh";) | cronta
 # copy system files
 echo ""
 echo "Copying / to $altroot. This takes for a few minutes."
-rsync --info=progress2 -ax --exclude=/home --exclude=$altroot --exclude=/tmp / $altroot
+rsync --info=progress2 -ax --exclude=/home --exclude=$altroot --exclude=/tmp --exclude=swapfile --exclude=swap.img / $altroot
 
 # cancel autorun on reboot
 #crontab -l | sed -e "/^@reboot $SCRIPT_DIR\// s/^/#/"| awk '!a[$0]++' | crontab -
