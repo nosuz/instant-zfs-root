@@ -22,10 +22,14 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 single_fs=0
 no_interact=0
 do_reboot=0
+encrypt_opts=""
 
 # define usage
 usage(){
     cat <<EOF_HELP
+-e
+    Encrypt all file system. Use a passphrase for decryption.
+
 -p  pool_name
     specify pool name
 
@@ -45,10 +49,22 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "hp:Rsy" opt; do
+while getopts "ehp:Rsy" opt; do
     case "$opt" in
+	e)
+	    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
+	    ;;
 	h)
 	    usage
+	    ;;
+	k)
+	    # dd bs=32 count=1 if=/dev/urandom of=key_file_path
+	    if [[ -f $OPTARG ]]; then
+		encrypt_opts="-o encryption=aes-256-gcm -o keyformat=raw -o keylocation=file://$OPTARG"
+	    else
+		echo Does not exit: $OPTARG
+		exit
+	    fi
 	    ;;
 	p)
 	    zfs_pool=$OPTARG
@@ -301,33 +317,25 @@ mkdir $altroot
 
 # create ZFS pool
 # all ZFS features are enabled by default
-zpool create -R $altroot -f -o ashift=12 -o autoexpand=on -O atime=off -O mountpoint=none $zfs_pool ${zpool_target}
+zpool create -R $altroot -f \
+      -o ashift=12 -o autoexpand=on \
+      -O atime=off -O mountpoint=none \
+      $zfs_pool ${zpool_target}
+
+# make top subvolume
+# https://www.reddit.com/r/zfs/comments/bnvdco/zol_080_encryption_dont_encrypt_the_pool_root/
+zfs create \
+    -o mountpoint=none \
+    $encrypt_opts $zfs_pool/$subvol
 
 # make subvolume for /(root)
-zfs create -o mountpoint=none $zfs_pool/$subvol
 zfs create -o mountpoint=/ $zfs_pool/$subvol/root
 if (( $single_fs != 1 )); then
     # make subvolume for /home and copy on it.
     zfs create -o mountpoint=/home $zfs_pool/$subvol/home
 fi
 
-# make symlinks for ZFS drives
-udevadm trigger
-
-while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
-    echo waiting ZFS vol come up in /dev/disk/zfs
-    sleep 3 # wait to come up dist/zfs
-done
-
-# convert name from sdX to drive ID
-zpool export $zfs_pool
-
-rm -rf $altroot
-mkdir $altroot
-
-zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
 zpool status
-
 zfs list
 
 # create update-refind.sh from template
@@ -427,6 +435,21 @@ for drive in ${drives[@]}; do
     umount /tmp/efi
 done
 
+# make symlinks for ZFS drives
+udevadm trigger
+
+# convert name from sdX to drive ID
+zpool export $zfs_pool
+
+while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
+    echo waiting ZFS vol come up in /dev/disk/zfs
+    sleep 3 # wait to come up dist/zfs
+done
+
+rm -rf $altroot
+mkdir $altroot
+
+zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
 zpool export $zfs_pool
 
 # setup EFI boot order
