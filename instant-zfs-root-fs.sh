@@ -260,9 +260,8 @@ KERNEL=="sd*[0-9]|nvme[0-9]n[0-9]p[0-9]", ENV{ID_FS_TYPE}=="zfs_member", SYMLINK
 EOF_UDEV
 fi
 
-# apply udev rules and make symlinks for ZFS drives
+# apply udev rules
 udevadm control --reload
-udevadm trigger
 
 # detroy existing ZFS pool
 zpool destroy $zfs_pool
@@ -313,13 +312,19 @@ if (( $single_fs != 1 )); then
     zfs create -o mountpoint=/home $zfs_pool/$subvol/home
 fi
 
+# make symlinks for ZFS drives
+udevadm trigger
+
+while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
+    echo waiting ZFS vol come up in /dev/disk/zfs
+    sleep 3 # wait to come up dist/zfs
+done
+
 # convert name from sdX to drive ID
 zpool export $zfs_pool
-sleep 5 # wait to come up dist/zfs
 
-[[ -e $altroot ]] && rm -rf $altroot
+rm -rf $altroot
 mkdir $altroot
-echo Made fresh $altroot
 
 zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
 zpool status
