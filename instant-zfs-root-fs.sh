@@ -228,7 +228,7 @@ fi
 
 apt update
 # install packges if some are missing
-apt install -y zfsutils-linux zfs-initramfs gdisk zip efibootmgr ruby
+apt install -y zfsutils-linux zfs-initramfs gdisk zip efibootmgr
 apt remove -y cryptsetup-initramfs
 
 if [[ -d refind-bin-${refind_ver} ]]; then
@@ -345,7 +345,7 @@ rsync --info=progress2 -ax --exclude=/home --exclude=$altroot --exclude=/tmp --e
 
 # cancel autorun on reboot
 #crontab -l | sed -e "/^@reboot $SCRIPT_DIR\// s/^/#/"| awk '!a[$0]++' | crontab -
-crontab -l | ruby -pe "sub(/^/, '#') if %r{^@reboot $SCRIPT_DIR/}"| awk '!a[$0]++' | crontab -
+crontab -l | perl -pe "s{^(\@reboot $SCRIPT_DIR/)}{#\1}" | awk '!a[$0]++' | crontab -
 
 echo "Copying /home to $altroot/home."
 rsync --info=progress2 -a /home/ $altroot/home
