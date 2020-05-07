@@ -75,7 +75,7 @@ echo $OPTIND
 zfs_drives=()
 while [ "$#" -gt "0" ]; do
     dev=$(basename $1)
-    if [[ -b /dev/$dev ]]; then
+    if [[ -b /dev/$dev ]] || [[ -e /dev/disk/by_id/$dev ]]; then
 	zfs_drives+=($dev)
     fi
     shift
