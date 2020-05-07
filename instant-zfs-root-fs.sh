@@ -415,15 +415,15 @@ for drive in ${drives[@]}; do
 
     mount /dev/${efi} /tmp/efi
 
-    mkdir -p /tmp/efi/efi/boot
+    mkdir -p /tmp/efi/EFI/boot
 
-    cp -r refind-bin-${refind_ver}/refind/* /tmp/efi/efi/boot/
-    cp refind-bin-${refind_ver}/refind/refind_x64.efi /tmp/efi/efi/boot/bootx64.efi
+    cp -r refind-bin-${refind_ver}/refind/* /tmp/efi/EFI/boot/
+    cp refind-bin-${refind_ver}/refind/refind_x64.efi /tmp/efi/EFI/boot/bootx64.efi
 
     cp $altroot/boot/initrd.img-$this_rel /tmp/efi/
     cp $altroot/boot/vmlinuz-$this_rel /tmp/efi/
 
-    cp /tmp/refind.conf /tmp/efi/efi/boot/
+    cp /tmp/refind.conf /tmp/efi/EFI/boot/
 
     umount /tmp/efi
 done

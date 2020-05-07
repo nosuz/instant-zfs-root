@@ -18,8 +18,8 @@ echo $initrd
 
 rsync -av --modify-window=1 --delete --filter='+ vmlinuz-*' --filter='+ initrd.img-*' --filter='- *' /boot/ /boot/efi
 
-if [[ -f /boot/efi/efi/boot/refind.conf ]]; then
-    refind=$(stat -c %Y /boot/efi/efi/boot/refind.conf 2> /dev/null || echo 0)
+if [[ -f /boot/efi/EFI/boot/refind.conf ]]; then
+    refind=$(stat -c %Y /boot/efi/EFI/boot/refind.conf 2> /dev/null || echo 0)
 
     boot_kernel=$(stat -c %Y $kernel)
     boot_initrd=$(stat -c %Y $initrd)
@@ -27,7 +27,7 @@ if [[ -f /boot/efi/efi/boot/refind.conf ]]; then
     update=false
     if (( $boot_kernel > $refind )) || (( $boot_initrd > $refind )); then
 	update=true
-	mv /boot/efi/efi/boot/refind.conf /boot/efi/efi/boot/refind.conf.bak
+	mv /boot/efi/EFI/boot/refind.conf /boot/efi/EFI/boot/refind.conf.bak
     fi
 else
     update=true
@@ -41,7 +41,7 @@ if $update; then
 	prev_rel=$(uname -r)
     fi
 
-    cat << EOF > /boot/efi/efi/boot/refind.conf
+    cat << EOF > /boot/efi/EFI/boot/refind.conf
 timeout 5
 icons_dir EFI/boot/icons/
 scanfor manual
@@ -81,7 +81,7 @@ for uuid in $(lsblk -o LABEL,UUID|grep '^EFI '|awk -e '{print $2}'); do
 
     # mount EFI partition
     mount UUID=$uuid /tmp/efi
-    if [[ ! -e /tmp/efi/efi/boot/refind.conf ]]; then
+    if [[ ! -e /tmp/efi/EFI/boot/refind.conf ]]; then
 	echo $uuid is not refind bootable partition.
 	umount /tmp/efi
 	continue
