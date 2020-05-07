@@ -252,8 +252,7 @@ unzip refind-bin-${refind_ver}.zip > /dev/null
 if [[ ! -e /etc/udev/rules.d/91-zfs-vdev.rules ]] ; then
         cat > /etc/udev/rules.d/91-zfs-vdev.rules <<EOF_UDEV
 # HOWTO install Ubuntu 14.04 or Later to a Native ZFS Root Filesystem
-# https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-install-Ubuntu-14.04-or-Later
--to-a-Native-ZFS-Root-Filesystem
+# https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-install-Ubuntu-14.04-or-Later-to-a-Native-ZFS-Root-Filesystem
 
 # Create a by-id style link in /dev for zfs_member vdev. Needed by boot
 KERNEL=="sd*[0-9]|nvme[0-9]n[0-9]p[0-9]", ENV{ID_FS_TYPE}=="zfs_member", SYMLINK+="disk/zfs/\$env{ID_BUS}-\$env{ID_SERIAL}-part%n"
