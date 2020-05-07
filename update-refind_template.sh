@@ -53,7 +53,7 @@ menuentry "Ubuntu ZFS" {
     loader /$kernel
     initrd /$initrd
     options "ro root=ZFS=__ZFS_POOL__/UBUNTU/root"
-    submenu "boot $prev_rel" {
+    submenuentry "boot prev release ($prev_rel)" {
         loader /vmlinuz-${prev_rel}
         initrd /initrd.img-${prev_rel}
     }
