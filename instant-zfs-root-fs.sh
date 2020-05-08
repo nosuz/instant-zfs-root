@@ -13,6 +13,16 @@ refind_ver='0.12.0'
 zfs_pool='tank'
 altroot='/tmp/root'
 
+# check booted from EFI
+if [[ ! -d /sys/firmware/efi ]]; then
+    echo -n "Does this machine support EFI boot? [yes/NO] "
+    read answer
+    if [[ ! $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+	echo This script requires EFI boot.
+	exit
+    fi
+fi
+
 # grant by ROOT is required
 (( $EUID != 0 )) && exec sudo "$0" "$@"
 
