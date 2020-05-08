@@ -23,12 +23,17 @@ single_fs=0
 no_interact=0
 do_reboot=0
 encrypt_opts=""
+encrypt_key=""
 
 # define usage
 usage(){
     cat <<EOF_HELP
 -e
     Encrypt all file system. Use a passphrase for decryption.
+
+-k keyfile_path
+    Encrypt all file system. Use a pass file for decryption.
+    If specified path for disk, all contents in the disk are destroy and created a new patition table.
 
 -p  pool_name
     specify pool name
@@ -49,7 +54,7 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "ehp:Rsy" opt; do
+while getopts "ehk:p:Rsy" opt; do
     case "$opt" in
 	e)
 	    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
@@ -58,11 +63,13 @@ while getopts "ehp:Rsy" opt; do
 	    usage
 	    ;;
 	k)
-	    # dd bs=32 count=1 if=/dev/urandom of=key_file_path
-	    if [[ -f $OPTARG ]]; then
-		encrypt_opts="-o encryption=aes-256-gcm -o keyformat=raw -o keylocation=file://$OPTARG"
+	    # https://github.com/openzfs/zfs/issues/6556
+	    # parted -s /dev/usbdevice mklabel gpt mkpart key 2048s 2048s
+	    # tr -d '\n' < /dev/urandom | dd of=/dev/disk/by-partlabel/key
+	    if [[ -b $OPTARG ]]; then
+		encrypt_key=$OPTARG
 	    else
-		echo Does not exit: $OPTARG
+		echo Does not exit key: $OPTARG
 		exit
 	    fi
 	    ;;
@@ -240,6 +247,51 @@ if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
 else
     echo "Cancelled"
     exit
+fi
+
+# check encryption key file is disk or partition
+if [[ -n $encrypt_key ]]; then
+    echo ""
+    type=$(lsblk -d -o TYPE $encrypt_key | tail -n 1)
+    case $type in
+	disk)
+	    key_file=/dev/disk/by-partlabel/zfs_key
+	    echo disk: $encrypt_key
+	    echo Are you sure to destroy or remove all contents in this disk?
+	    echo yes: Clear all contents in this disk and make encryotion key drive.
+	    echo NO: Keep every things and exit.
+	    echo -n "[yes/NO] "
+	    read answer
+	    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+		parted -s $encrypt_key mklabel gpt mkpart zfs_key 2048s 2048s
+		while [[ ! -e $key_file ]]; do
+		    echo waiting key file.
+		    sleep 2
+		done
+		tr -d '\n' < /dev/urandom | dd bs=512 count=1 of=$key_file
+	    else
+		exit
+	    fi
+	    ;;
+	part)
+	    echo partition: $encrypt_key
+	    echo Do you want to make a new key in this partition?
+	    echo yes: Create new encryption key.
+	    echo NO: Use current content as encryption key.
+	    echo -n "[yes/NO] "
+	    read answer
+	    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+		(tr -d '\n' < /dev/urandom | dd bs=512 count=1; echo "") > $encrypt_key
+	    fi
+	    key_file=$encrypt_key
+	    ;;
+	*)
+	    echo unknow type $type for $encrypt_key
+	    exit
+	    ;;
+    esac
+    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=file://$key_file"
+    echo $encrypt_opts
 fi
 
 apt update
