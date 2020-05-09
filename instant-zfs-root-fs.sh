@@ -6,9 +6,6 @@
 #https://pve.proxmox.com/wiki/Booting_a_ZFS_root_file_system_via_UEFI
 #https://wiki.archlinux.jp/index.php/GNU_Parted#UEFI.2FGPT_.E3.81.AE.E4.BE.8B
 
-# http://sourceforge.net/projects/refind/files/
-refind_ver='0.12.0'
-
 # ZFS default pool name
 zfs_pool='tank'
 altroot='/tmp/root'
@@ -309,24 +306,8 @@ fi
 
 apt update
 # install packges if some are missing
-apt install -y zfsutils-linux zfs-initramfs gdisk zip efibootmgr
+apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr
 apt remove -y cryptsetup-initramfs
-
-if [[ -d refind-bin-${refind_ver} ]]; then
-    rm -rf refind-bin-${refind_ver}
-fi
-
-if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
-    wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
-
-    if [[ -s refind-bin-${refind_ver}.zip ]] ; then
-	echo Got refind-bin-${refind_ver}.zip
-    else
-	echo Failed to download refind-bin-${refind_ver}.zip
-	exit
-    fi
-fi
-unzip refind-bin-${refind_ver}.zip > /dev/null
 
 # install udev rules
 # make link to the member of ZFS in /dev
@@ -408,12 +389,6 @@ fi
 zpool status
 zfs list
 
-# create update-refind.sh from template
-sed -e "s/__ZFS_POOL__/$zfs_pool/" \
-    -e "s/__ICON__/$icon/" \
-    $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
-chmod +x $SCRIPT_DIR/update-refind.sh
-
 # run post install script at the next boot.
 crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh";) | crontab -
 
@@ -457,25 +432,11 @@ for d in proc sys dev;do
 done
 
 this_rel=$(uname -r)
-cat > /tmp/refind.conf <<EOF_CONF
-timeout 10
-icons_dir EFI/boot/icons/
-scanfor manual
-scan_all_linux_kernels false
-
-menuentry "Ubuntu ZFS" {
-    graphics on
-    ostype Linux
-    icon EFI/boot/icons/$icon
-    loader /vmlinuz-${this_rel}
-    initrd /initrd.img-${this_rel}
-    options "ro root=ZFS=$zfs_pool/$subvol/root"
-}
-EOF_CONF
-
-echo $this_rel > $altroot/boot/prev_release.txt
-
-cat /tmp/refind.conf
+pushd . > /dev/null
+cd $altroot/boot
+ln -sf vmlinuz-$this_rel vmlinuz
+ln -sf initrd.img-$this_rel initrd.img
+popd > /dev/null
 
 if [[ ! -e /tmp/efi ]]; then
     mkdir /tmp/efi
@@ -495,15 +456,7 @@ for drive in ${drives[@]}; do
 
     mount /dev/${efi} /tmp/efi
 
-    mkdir -p /tmp/efi/EFI/boot
-
-    cp -r refind-bin-${refind_ver}/refind/* /tmp/efi/EFI/boot/
-    cp refind-bin-${refind_ver}/refind/refind_x64.efi /tmp/efi/EFI/boot/bootx64.efi
-
-    cp $altroot/boot/initrd.img-$this_rel /tmp/efi/
-    cp $altroot/boot/vmlinuz-$this_rel /tmp/efi/
-
-    cp /tmp/refind.conf /tmp/efi/EFI/boot/
+    rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi
 
     umount /tmp/efi
 done
@@ -523,8 +476,7 @@ zpool export $zfs_pool
 
 # setup EFI boot order
 for (( i=${#drives[@]}-1; i>=0; i--)); do
-    serial=$(lsblk -dno MODEL,SERIAL /dev/${drives[i]} | sed -e 's/ \+/_/g')
-    efibootmgr -c -d /dev/${drives[i]} -p 1 -l '\efi\boot\bootx64.efi' -L "$distri ZFS $serial"
+    efibootmgr -c -d /dev/${drives[i]} -p 1 -l '\vmlinuz' -L "$distri ZFS" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=\\initrd.img"
 done
 
 # show final message
