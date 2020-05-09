@@ -48,8 +48,9 @@ scanfor manual
 scan_all_linux_kernels false
 
 menuentry "Ubuntu ZFS" {
-    ostype Linux
     graphics on
+    ostype Linux
+    icon EFI/boot/icons/__ICON__
     loader /$kernel
     initrd /$initrd
     options "ro root=ZFS=__ZFS_POOL__/UBUNTU/root"

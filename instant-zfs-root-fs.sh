@@ -34,6 +34,7 @@ no_interact=0
 do_reboot=0
 encrypt_opts=""
 encrypt_key=""
+icon="os_linux.png"
 
 # define usage
 usage(){
@@ -120,6 +121,7 @@ release=$(lsb_release -r | awk '{print $2}')
 case "$distri" in
     "Ubuntu")
 	subvol="UBUNTU"
+	icon="os_ubuntu.png"
 	case "$release" in
 	    19.04)
 		:
@@ -138,6 +140,7 @@ case "$distri" in
 	;;
     "LinuxMint")
 	subvol="MINT"
+	icon="os_linuxmint.png"
 	case "$release" in
 	    19.3)
 		:
@@ -406,7 +409,9 @@ zpool status
 zfs list
 
 # create update-refind.sh from template
-sed -e "s/__ZFS_POOL__/$zfs_pool/" $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
+sed -e "s/__ZFS_POOL__/$zfs_pool/" \
+    -e "s/__ICON__/$icon/" \
+    $SCRIPT_DIR/update-refind_template.sh > $SCRIPT_DIR/update-refind.sh
 chmod +x $SCRIPT_DIR/update-refind.sh
 
 # run post install script at the next boot.
@@ -459,8 +464,9 @@ scanfor manual
 scan_all_linux_kernels false
 
 menuentry "Ubuntu ZFS" {
-    ostype Linux
     graphics on
+    ostype Linux
+    icon EFI/boot/icons/$icon
     loader /vmlinuz-${this_rel}
     initrd /initrd.img-${this_rel}
     options "ro root=ZFS=$zfs_pool/$subvol/root"
