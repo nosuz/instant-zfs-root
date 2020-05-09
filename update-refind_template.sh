@@ -67,7 +67,7 @@ fi
 
 
 if [[ -e /tmp/efi ]]; then
-    rm -rf tmp/efi
+    rm -rf /tmp/efi
 fi
 mkdir /tmp/efi
 
