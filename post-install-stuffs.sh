@@ -12,14 +12,9 @@ crontab -l | perl -pe "s{^(\@reboot $SCRIPT_DIR/)}{#\1}" | awk '!a[$0]++' | cron
 
 swapoff -a
 
-if [[ ! -e $SCRIPT_DIR/update-refind.sh ]]; then
-    echo Doesn\'t exist update-refind.sh in $SCRIPT_DIR.
-    exit
-fi
+cp $SCRIPT_DIR/update-efi.sh /boot
 
-cp $SCRIPT_DIR/update-refind.sh /boot
-
-cat << EOF > /etc/systemd/system/update-refind.service
+cat << EOF > /etc/systemd/system/update-efi.service
 [Unit]
 # Execute command before shutdown/reboot [duplicate]
 # https://askubuntu.com/questions/416299/execute-command-before-shutdown-reboot
@@ -29,11 +24,11 @@ Description=Copy latest kernel to EFI patitions and update refind.conf
 Type=oneshot
 RemainAfterExit=true
 ExecStart=/bin/true
-ExecStop=/boot/update-refind.sh
+ExecStop=/boot/update-efi.sh
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl enable update-refind
-systemctl start update-refind
+systemctl enable update-efi
+systemctl start update-efi
