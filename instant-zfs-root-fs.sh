@@ -511,17 +511,13 @@ done
 # make symlinks for ZFS drives
 udevadm trigger
 
-# convert name from sdX to drive ID
-zpool export $zfs_pool
-
 while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
     echo waiting ZFS vol come up in /dev/disk/zfs
     sleep 3 # wait to come up dist/zfs
 done
 
-rm -rf $altroot
-mkdir $altroot
-
+# convert name from sdX to drive ID
+zpool export $zfs_pool
 zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
 zpool export $zfs_pool
 
