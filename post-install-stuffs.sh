@@ -10,6 +10,8 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 #crontab -l | sed -e "/^@reboot $SCRIPT_DIR\//s/^/#/"| awk '!a[$0]++' | crontab -
 crontab -l | perl -pe "s{^(\@reboot $SCRIPT_DIR/)}{#\1}" | awk '!a[$0]++' | crontab -
 
+swapoff -a
+
 if [[ ! -e $SCRIPT_DIR/update-refind.sh ]]; then
     echo Doesn\'t exist update-refind.sh in $SCRIPT_DIR.
     exit
