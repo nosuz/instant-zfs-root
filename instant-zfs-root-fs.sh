@@ -31,6 +31,7 @@ no_interact=0
 do_reboot=0
 encrypt_opts=""
 encrypt_key=""
+vdev=""
 
 # define usage
 usage(){
@@ -55,13 +56,16 @@ usage(){
 -y
     Skip editing /etc/fstab file.
 
+-z vdev
+    Specify vdev to create. The option is single, jbod, mirror, raidz, raidz1, and raidz2.
+
 specify ZFS drives:
 	-- drive1 drive2
 
 EOF_HELP
 }
 
-while getopts "ehk:p:Rsy" opt; do
+while getopts "ehk:p:Rsyz:" opt; do
     case "$opt" in
 	e)
 	    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
@@ -92,6 +96,26 @@ while getopts "ehk:p:Rsy" opt; do
 	y)
 	    no_interact=1
 	    ;;
+	z)
+	    case ${OPTARG,,} in
+		single|jbod)
+		    vdev="single"
+		    ;;
+		mirror)
+		    vdev="mirror"
+		    ;;
+		raid|raid1)
+		    vdev="raidz1"
+		    ;;
+		raid2)
+		    vdev="raidz2"
+		    ;;
+		*)
+		    echo unknow vdev name $OPTARG
+		    exit
+		    ;;
+	    esac
+	    ;;
     esac
 done
 
@@ -103,9 +127,12 @@ echo $OPTIND
 
 # parse additional arguments
 zfs_drives=()
-while [ "$#" -gt "0" ]; do
+while (( $# > 0 )); do
     dev=$(basename $1)
-    if [[ -b /dev/$dev ]] || [[ -e /dev/disk/by_id/$dev ]]; then
+    if [[ -e /dev/disk/by_id/$dev ]]; then
+	dev=$(readlink /dev/disk/by_id/$dev)
+	zfs_drives+=($(basename $dev))
+    elif [[ -b /dev/$dev ]]; then
 	zfs_drives+=($dev)
     fi
     shift
@@ -225,24 +252,57 @@ cat <<EOF_DRIVE_FOOTER
 
 EOF_DRIVE_FOOTER
 
-case "${#drives[@]}" in
-    1)
-	zpool_type="Single drive pool"
-	zpool_target="${targets[@]}"
-	;;
-    2)
-	zpool_type="Mirror pool"
-	zpool_target="mirror ${targets[@]}"
-	;;
-    3)
-	zpool_type="RAIDZ pool"
-	zpool_target="raidz ${targets[@]}"
-	;;
-    4)
-	zpool_type="RAIDZ2 pool"
-	zpool_target="raidz2 ${targets[@]}"
-	;;
-esac
+if [[ -z $vdev ]]; then
+    case "${#drives[@]}" in
+	1)
+	    zpool_type="Single drive pool"
+	    zpool_target="${targets[@]}"
+	    ;;
+	2)
+	    zpool_type="Mirror pool"
+	    zpool_target="mirror ${targets[@]}"
+	    ;;
+	3)
+	    zpool_type="RAIDZ pool"
+	    zpool_target="raidz ${targets[@]}"
+	    ;;
+	4)
+	    zpool_type="RAIDZ2 pool"
+	    zpool_target="raidz2 ${targets[@]}"
+	    ;;
+    esac
+else
+    case $vdev in
+	single)
+	    zpool_type="Single or concatinated (JBOD) drive pool"
+	    zpool_target="${targets[@]}"
+	    ;;
+	mirror)
+	    if (( ${#drives[@]} < 2 )); then
+		echo At least 2 drives are required.
+		exit
+	    fi
+	    zpool_type="Mirror pool"
+	    zpool_target="mirror ${targets[@]}"
+	    ;;
+	raid|raid1)
+	    if (( ${#drives[@]} < 3 )); then
+		echo At least 3 drives are required.
+		exit
+	    fi
+	    zpool_type="RAIDZ pool"
+	    zpool_target="raidz ${targets[@]}"
+	    ;;
+	raid2)
+	    if (( ${#drives[@]} < 4 )); then
+		echo At least 4 drives are required.
+		exit
+	    fi
+	    zpool_type="RAIDZ2 pool"
+	    zpool_target="raidz2 ${targets[@]}"
+	    ;;
+    esac
+fi
 
 echo Make $zpool_type
 echo Make $zpool_target
