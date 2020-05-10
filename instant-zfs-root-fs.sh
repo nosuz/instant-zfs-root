@@ -141,6 +141,8 @@ done
 # get Ubuntu Release
 distri=$(lsb_release -i | awk '{print $3}')
 release=$(lsb_release -r | awk '{print $2}')
+kernel_ver=$(uname -r)
+
 case "$distri" in
     "Ubuntu")
 	subvol="UBUNTU"
@@ -481,18 +483,17 @@ for d in proc sys dev;do
     mount --rbind /$d $altroot/$d
 done
 
-chroot $altroot update-initramfs -u -k all
+chroot $altroot update-initramfs -u -k $kernel_ver
 
 for d in proc sys dev;do
     echo "unmount $d"
     umount -lfR $altroot/$d
 done
 
-this_rel=$(uname -r)
 pushd . > /dev/null
 cd $altroot/boot
-ln -sf vmlinuz-$this_rel vmlinuz
-ln -sf initrd.img-$this_rel initrd.img
+ln -sf vmlinuz-$kernel_ver vmlinuz
+ln -sf initrd.img-$kernel_ver initrd.img
 popd > /dev/null
 
 if [[ ! -e /tmp/efi ]]; then
