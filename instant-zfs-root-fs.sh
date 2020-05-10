@@ -533,6 +533,7 @@ done
 # convert name from sdX to drive ID
 zpool export $zfs_pool
 zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
+zpool status
 zpool export $zfs_pool
 
 # show final message
