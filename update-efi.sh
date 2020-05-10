@@ -9,21 +9,17 @@ cd /boot
 
 distri=$(lsb_release -i | awk '{print $3}')
 echo ----------------
-echo $distri
 date
 
 kernel=$(ls -v vmlinuz-* | tail -n 1)
-echo $kernel
-
 initrd="initrd.img-${kernel#vmlinuz-}"
-echo $initrd
 
 new=$(stat -c %Y $kernel)
 boot=$(stat -c %Y efi/EFI/${distri,,}/vmlinuz)
 diff=$(( $new - $boot ))
 
 if (( $diff > 1 )); then
-    echo "update vmlinux to $kernel \($diff sec\)"
+    echo "update vmlinux to $kernel ($diff sec)"
     ln -sf $kernel vmlinuz
 fi
 
@@ -32,7 +28,7 @@ boot=$(stat -c %Y efi/EFI/${distri,,}/initrd.img)
 diff=$(( $new - $boot ))
 
 if (( $diff > 1 )); then
-    echo "update initrd to $initrd \($diff sec\)"
+    echo "update initrd to $initrd ($diff sec)"
     ln -sf $initrd initrd.img
 fi
 
