@@ -31,7 +31,6 @@ no_interact=0
 do_reboot=0
 encrypt_opts=""
 encrypt_key=""
-icon="os_linux.png"
 
 # define usage
 usage(){
@@ -118,7 +117,6 @@ release=$(lsb_release -r | awk '{print $2}')
 case "$distri" in
     "Ubuntu")
 	subvol="UBUNTU"
-	icon="os_ubuntu.png"
 	case "$release" in
 	    19.04)
 		:
@@ -137,7 +135,6 @@ case "$distri" in
 	;;
     "LinuxMint")
 	subvol="MINT"
-	icon="os_linuxmint.png"
 	case "$release" in
 	    19.3)
 		:
