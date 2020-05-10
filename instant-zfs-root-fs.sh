@@ -475,7 +475,7 @@ if [[ -e $altroot/etc/zfs/zpool.cache ]]; then
     rm $altroot/etc/zfs/zpool.cache
 fi
 
-# update initiramfs
+# update initramfs
 for d in proc sys dev;do
     echo "mount $d"
     mount --rbind /$d $altroot/$d
