@@ -54,7 +54,7 @@ for uuid in $(lsblk -o LABEL,UUID | awk -e '{if ($1 == "EFI") print $2}'); do
     mount UUID=$uuid /tmp/efi
 
     # sync files in EFI patition.
-    rsync -a --copy-links --delete --modify-window=1 /boot/efi/ /tmp/efi
+    rsync -a --delete --modify-window=1 /boot/efi/ /tmp/efi
 
     umount /tmp/efi
 done
