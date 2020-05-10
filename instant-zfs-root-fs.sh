@@ -421,7 +421,7 @@ for d in proc sys dev;do
     mount --rbind /$d $altroot/$d
 done
 
-chroot $altroot update-initramfs -u -k all
+chroot $altroot update-initramfs -u -k $this_rel
 
 for d in proc sys dev;do
     echo "unmount $d"
