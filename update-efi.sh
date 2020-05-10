@@ -7,7 +7,9 @@ exec 1>> /var/log/update-efi.log 2>&1
 
 cd /boot
 
+distri=$(lsb_release -i | awk '{print $3}')
 echo ----------------
+echo $distri
 date
 
 kernel=$(ls -v vmlinuz-* | tail -n 1)
@@ -17,7 +19,7 @@ initrd="initrd.img-${kernel#vmlinuz-}"
 echo $initrd
 
 new=$(stat -c %Y $kernel)
-boot=$(stat -c %Y efi/vmlinuz)
+boot=$(stat -c %Y efi/EFI/${distri,,}/vmlinuz)
 diff=$(( $new - $boot ))
 
 if (( $diff > 1 )); then
@@ -26,7 +28,7 @@ if (( $diff > 1 )); then
 fi
 
 new=$(stat -c %Y $initrd)
-boot=$(stat -c %Y efi/initrd.img)
+boot=$(stat -c %Y efi/EFI/${distri,,}/initrd.img)
 diff=$(( $new - $boot ))
 
 if (( $diff > 1 )); then
@@ -34,7 +36,7 @@ if (( $diff > 1 )); then
     ln -sf $initrd initrd.img
 fi
 
-rsync -av --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' --modify-window=1 /boot/ /boot/efi
+rsync -av --copy-links --delete --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' --modify-window=1 /boot/ /boot/efi/EFI/${distri,,}
 
 if [[ -e /tmp/efi ]]; then
     rm -rf /tmp/efi

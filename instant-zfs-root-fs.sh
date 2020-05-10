@@ -452,8 +452,12 @@ for drive in ${drives[@]}; do
     esac
 
     mount /dev/${efi} /tmp/efi
+    mkdir -p /tmp/efi/EFI/${distri,,}
 
-    rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi
+    rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
+
+    # add EFI boot entry
+    efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
 
     umount /tmp/efi
 done
@@ -470,11 +474,6 @@ done
 zpool export $zfs_pool
 zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
 zpool export $zfs_pool
-
-# setup EFI boot order
-for (( i=${#drives[@]}-1; i>=0; i--)); do
-    efibootmgr -c -d /dev/${drives[i]} -p 1 -l '\vmlinuz' -L "$distri ZFS" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=\\initrd.img"
-done
 
 # show final message
 echo Finished.
