@@ -10,6 +10,9 @@
 zfs_pool='tank'
 altroot='/tmp/root'
 
+# http://sourceforge.net/projects/refind/files/
+refind_ver='0.12.0'
+
 # check booted from EFI
 if [[ ! -d /sys/firmware/efi ]]; then
     echo -n "Does this machine support EFI boot? [yes/NO] "
@@ -31,11 +34,15 @@ no_interact=0
 do_reboot=0
 encrypt_opts=""
 encrypt_key=""
+install_bootmng=0
 vdev=""
 
 # define usage
 usage(){
     cat <<EOF_HELP
+-b
+    Install boot load manager, rEFInd.
+
 -e
     Encrypt all file system. Use a passphrase for decryption.
 
@@ -65,8 +72,11 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "ehk:p:Rsyz:" opt; do
+while getopts "behk:p:Rsyz:" opt; do
     case "$opt" in
+	b)
+	    install_bootmng=1
+	    ;;
 	e)
 	    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
 	    ;;
@@ -366,6 +376,7 @@ fi
 apt update
 # install packges if some are missing
 apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr
+
 apt remove -y cryptsetup-initramfs
 
 # install udev rules
@@ -490,6 +501,41 @@ for d in proc sys dev;do
     umount -lfR $altroot/$d
 done
 
+# download rEFInd
+if (( install_bootmng == 1)); then
+    apt install -y zip
+
+    if [[ ! -d refind-bin-${refind_ver} ]]; then
+	if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
+	    wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
+
+	    if [[ -s refind-bin-${refind_ver}.zip ]] ; then
+		echo Got refind-bin-${refind_ver}.zip
+	    else
+		echo Failed to download refind-bin-${refind_ver}.zip
+		exit
+	    fi
+	fi
+	unzip refind-bin-${refind_ver}.zip > /dev/null
+    fi
+
+    cat > /tmp/refind.conf <<EOF_CONF
+timeout 10
+icons_dir EFI/boot/icons/
+scanfor manual
+scan_all_linux_kernels false
+
+menuentry "$distri ZFS" {
+    graphics on
+    ostype Linux
+    loader /EFI/${distri,,}/vmlinuz
+    initrd /EFI/${distri,,}/initrd.img
+    options "ro root=ZFS=$zfs_pool/$subvol/root"
+}
+EOF_CONF
+cat /tmp/refind.conf
+fi
+
 pushd . > /dev/null
 cd $altroot/boot
 ln -sf vmlinuz-$kernel_ver vmlinuz
@@ -518,8 +564,21 @@ for drive in ${drives[@]}; do
     rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
 
     # add EFI boot entry
-    efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
+    serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+    if (( install_bootmng == 1 )); then
+	# https://www.rodsbooks.com/refind/installing.html#linux
+	cp -pr refind-bin-${refind_ver}/refind /tmp/efi/EFI/
+	# optional
+	# remove useless binary and drivers
+	ls -d /tmp/efi/EFI/refind/* | grep -vE '_x64|icons' | xargs rm -rf
 
+	cp -p /tmp/refind.conf /tmp/efi/EFI/refind/
+
+	efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/refind/refind_x64.efi' -L "rEFInd $serial"
+
+    else
+	efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
+    fi
     umount /tmp/efi
 done
 
