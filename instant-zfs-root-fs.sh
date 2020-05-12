@@ -392,8 +392,6 @@ apt update
 # install packges if some are missing
 apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr
 
-apt remove -y cryptsetup-initramfs
-
 # install udev rules
 # make link to the member of ZFS in /dev
 if [[ ! -e /etc/udev/rules.d/91-zfs-vdev.rules ]] ; then
