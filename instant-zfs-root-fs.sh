@@ -36,6 +36,7 @@ encrypt_opts=""
 encrypt_key=""
 install_bootmng=0
 vdev=""
+auto_trim=""
 
 # define usage
 usage(){
@@ -60,6 +61,10 @@ usage(){
     Single ZFS filesystem. /(root) and /home are placed
     on the same filesystem.
 
+-t
+    Enable auto trim.
+    On the zpool manual, this option can put significant stress on the strage devices. So, they recommend periodical zpool trim command for lower end devices.
+
 -y
     Skip editing /etc/fstab file.
 
@@ -72,7 +77,7 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "behk:p:Rsyz:" opt; do
+while getopts "behk:p:Rstyz:" opt; do
     case "$opt" in
 	b)
 	    install_bootmng=1
@@ -102,6 +107,9 @@ while getopts "behk:p:Rsyz:" opt; do
 	    ;;
 	s)
 	    single_fs=1
+	    ;;
+	t)
+	    auto_trim="-o autotrim=on"
 	    ;;
 	y)
 	    no_interact=1
@@ -434,7 +442,7 @@ mkdir $altroot
 # create ZFS pool
 # all ZFS features are enabled by default
 zpool create -R $altroot -f \
-      -o ashift=12 -o autoexpand=on \
+      -o ashift=12 -o autoexpand=on $auto_trim\
       -O atime=off -O canmount=off -O mountpoint=none \
       $zfs_pool ${zpool_target}
 
