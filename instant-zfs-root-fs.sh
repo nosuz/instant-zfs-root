@@ -37,6 +37,7 @@ encrypt_key=""
 install_bootmng=0
 vdev=""
 auto_trim=""
+zfs_compress="-O compression=lz4"
 
 # define usage
 usage(){
@@ -65,6 +66,9 @@ usage(){
     Enable auto trim.
     On the zpool manual, this option can put significant stress on the strage devices. So, they recommend periodical zpool trim command for lower end devices.
 
+-u
+    Disable compression by LZ4.
+
 -y
     Skip editing /etc/fstab file.
 
@@ -77,7 +81,7 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "behk:p:Rstyz:" opt; do
+while getopts "behk:p:Rstuyz:" opt; do
     case "$opt" in
 	b)
 	    install_bootmng=1
@@ -110,6 +114,9 @@ while getopts "behk:p:Rstyz:" opt; do
 	    ;;
 	t)
 	    auto_trim="-o autotrim=on"
+	    ;;
+	u)
+	    zfs_compress=""
 	    ;;
 	y)
 	    no_interact=1
@@ -443,7 +450,8 @@ mkdir $altroot
 # all ZFS features are enabled by default
 zpool create -R $altroot -f \
       -o ashift=12 -o autoexpand=on $auto_trim\
-      -O atime=off -O canmount=off -O mountpoint=none \
+      -O atime=off $zfs_compress \
+      -O canmount=off -O mountpoint=none \
       $zfs_pool ${zpool_target}
 
 # make top subvolume
