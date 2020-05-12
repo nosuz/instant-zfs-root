@@ -46,10 +46,11 @@ usage(){
     Install boot load manager, rEFInd.
 
 -e
-    Encrypt all file system. Use a passphrase for decryption.
+    Encrypt all file system by passphrase.
+    If -k option is set at the same time, file system is encrypted by the key file.
 
 -k keyfile_path
-    Encrypt all file system. Use a pass file for decryption.
+    Encrypt all file system by the key file. This option override -e option.
     If specified path for disk, all contents in the disk are destroy and created a new patition table.
 
 -p  pool_name
