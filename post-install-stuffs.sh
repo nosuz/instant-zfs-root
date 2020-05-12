@@ -32,3 +32,6 @@ EOF
 
 systemctl enable update-efi
 systemctl start update-efi
+
+cp $SCRIPT_DIR/trim-zfs-pools.sh /boot
+crontab -l | (cat ; echo "@monthly /boot/trim-zfs-pools.sh";) | crontab -
