@@ -73,7 +73,7 @@ usage(){
     Skip editing /etc/fstab file.
 
 -z vdev
-    Specify vdev to create. The option is single, jbod, mirror, raidz, raidz1, and raidz2.
+    Specify vdev to create. The option is single, stripe, mirror, raidz, raidz1, and raidz2.
 
 specify ZFS drives:
 	-- drive1 drive2
@@ -123,7 +123,7 @@ while getopts "behk:p:Rstuyz:" opt; do
 	    ;;
 	z)
 	    case ${OPTARG,,} in
-		single|jbod)
+		single|stripe)
 		    vdev="single"
 		    ;;
 		mirror)
@@ -301,7 +301,7 @@ if [[ -z $vdev ]]; then
 else
     case $vdev in
 	single)
-	    zpool_type="Single or concatinated (JBOD) drive pool"
+	    zpool_type="Single or striped drive pool"
 	    zpool_target="${targets[@]}"
 	    ;;
 	mirror)
