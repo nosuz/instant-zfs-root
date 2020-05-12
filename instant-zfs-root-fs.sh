@@ -389,8 +389,16 @@ if [[ -n $encrypt_key ]]; then
 fi
 
 apt update
+if (( $? != 0 )); then
+    echo Failed to update packages information.
+    exit
+fi
 # install packges if some are missing
 apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr
+if (( $? != 0 )); then
+    echo Failed to install required packages.
+    exit
+fi
 
 # install udev rules
 # make link to the member of ZFS in /dev
