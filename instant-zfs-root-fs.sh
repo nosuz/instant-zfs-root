@@ -74,8 +74,8 @@ usage(){
 -y
     Skip editing /etc/fstab file.
 
--z vdev
-    Specify vdev to create. The option is single, stripe, mirror, raidz, raidz1, and raidz2.
+-z <single|stripe|mirror|raidz|raidz1|raidz2>
+    Specify vdev to create.
 
 specify ZFS drives:
 	-- drive1 drive2
