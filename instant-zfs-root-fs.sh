@@ -30,7 +30,7 @@ fi
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 single_fs=0
-no_interact=0
+edit_fstab=0
 do_reboot=0
 encrypt_opts=""
 encrypt_key=""
@@ -49,6 +49,9 @@ usage(){
 -e
     Encrypt all file system by passphrase.
     If -k option is set at the same time, file system is encrypted by the key file.
+
+-f
+    Stop to edit /etc/fstab file.
 
 -k keyfile_path
     Encrypt all file system by the key file. This option override -e option.
@@ -71,9 +74,6 @@ usage(){
 -u
     Disable compression by LZ4.
 
--y
-    Skip editing /etc/fstab file.
-
 -z <single|stripe|mirror|raidz|raidz1|raidz2>
     Specify vdev to create.
 
@@ -83,7 +83,7 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "b:ehk:p:Rstuyz:" opt; do
+while getopts "b:efhk:p:Rstuz:" opt; do
     case "$opt" in
 	b)
 	    case $OPTARG in
@@ -101,6 +101,9 @@ while getopts "b:ehk:p:Rstuyz:" opt; do
 	    ;;
 	e)
 	    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
+	    ;;
+	f)
+	    edit_fstab=1
 	    ;;
 	h)
 	    usage
@@ -130,9 +133,6 @@ while getopts "b:ehk:p:Rstuyz:" opt; do
 	    ;;
 	u)
 	    zfs_compress=""
-	    ;;
-	y)
-	    no_interact=1
 	    ;;
 	z)
 	    case ${OPTARG,,} in
@@ -524,7 +524,7 @@ rsync --info=progress2 -a /home/ $altroot/home
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
 echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
 
-if (( $no_interact != 1 )); then
+if (( $edit_fstab == 1 )); then
     # edit /etc/fstab
     nano $altroot/etc/fstab
 fi
