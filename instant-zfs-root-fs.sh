@@ -34,7 +34,8 @@ no_interact=0
 do_reboot=0
 encrypt_opts=""
 encrypt_key=""
-install_bootmng=0
+bootmng=""
+grub_pkg=""
 vdev=""
 auto_trim=""
 zfs_compress="-O compression=lz4"
@@ -42,8 +43,8 @@ zfs_compress="-O compression=lz4"
 # define usage
 usage(){
     cat <<EOF_HELP
--b
-    Install boot load manager, rEFInd.
+-b <grub|refind>
+    Install boot load manager.
 
 -e
     Encrypt all file system by passphrase.
@@ -82,10 +83,21 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "behk:p:Rstuyz:" opt; do
+while getopts "b:ehk:p:Rstuyz:" opt; do
     case "$opt" in
 	b)
-	    install_bootmng=1
+	    case $OPTARG in
+		grub)
+		    bootmng="grub"
+		    ;;
+		refind)
+		    bootmng="refind"
+		    ;;
+		*)
+		    echo set grub or refind.
+		    exit
+		    ;;
+	    esac
 	    ;;
 	e)
 	    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
@@ -389,13 +401,24 @@ if [[ -n $encrypt_key ]]; then
     echo $encrypt_opts
 fi
 
+# GRUB can't recognize not all ZFS features like encryption.
+if [[ -n $encrypt_opts ]] && [[ $bootmng == "grub" ]]; then
+    echo
+    echo "Grub can't boot system on encrypted ZFS."
+    echo Use the rEFInd boot manager or EFIstub.
+    exit
+fi
+
 apt update
 if (( $? != 0 )); then
     echo Failed to update packages information.
     exit
 fi
 # install packges if some are missing
-apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr
+if [[ $bootmng == "grub" ]]; then
+    grub_pkg="grub-efi-amd64-signed shim-signed"
+fi
+apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr $grub_pkg
 if (( $? != 0 )); then
     echo Failed to install required packages.
     exit
@@ -512,37 +535,108 @@ if [[ -e $altroot/etc/zfs/zpool.cache ]]; then
 fi
 
 # update initramfs
-for d in proc sys dev;do
+# mount /run to avoid next warnings.
+# WARNING: Device /dev/XXX not initialized in udev database even after waiting 10000000 microseconds.
+for d in proc sys dev run;do
     echo "mount $d"
     mount --rbind /$d $altroot/$d
 done
 
 chroot $altroot update-initramfs -u -k $kernel_ver
 
-for d in proc sys dev;do
+if [[ $bootmng == "grub" ]]; then
+    if [[ -e $altroot/etc/default/grub ]]; then
+	mv $altroot/etc/default/grub $altroot/etc/default/grub.orig
+    fi
+    cat > $altroot/etc/default/grub <<EOF_GRUB
+GRUB_DEFAULT=0
+#GRUB_TIMEOUT_STYLE=hidden
+GRUB_TIMEOUT=5
+GRUB_RECORDFAIL_TIMEOUT=5
+GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
+GRUB_CMDLINE_LINUX_DEFAULT=""
+GRUB_CMDLINE_LINUX=""
+GRUB_TERMINAL=console
+EOF_GRUB
+    cat $altroot/etc/default/grub
+
+    if [[ ! -d $altroot/tmp ]]; then
+	mkdir $altroot/tmp
+    fi
+    mount -t tmpfs tmpfs $altroot/tmp
+
+    for drive in ${drives[@]}; do
+	case "$drive" in
+	    sd*)
+		efi="${drive}1"
+		;;
+	    nvme*)
+		efi="${drive}p1"
+		;;
+	    *)
+		efi="${drive}1"
+		;;
+	esac
+
+	if [[ ! -d $altroot/boot/efi ]]; then
+	    mkdir -p $altroot/boot/efi
+	fi
+	mount /dev/${efi} $altroot/boot/efi
+	if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
+	    mkdir -p $altroot/boot/efi/EFI/${distri,,}
+	fi
+
+	rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
+
+	echo
+	echo Install Grub to $drive
+	chroot $altroot update-grub
+	chroot $altroot grub-install \
+	       --efi-directory=/boot/efi \
+	       --bootloader-id=${distri,,} \
+	       --recheck --no-floppy
+
+	umount $altroot/boot/efi
+    done
+
+    umount $altroot/tmp
+
+    for drive in ${drives[@]}; do
+	# Grub-install make only one boot entry.
+	# Install endividual boot entry.
+    	serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+	echo Make boot entry for $drive $serial
+	efibootmgr -c -d /dev/$drive -p 1 \
+		   -l '/EFI/ubuntu/shimx64.efi' \
+		   -L "$distri ZFS $serial"
+    done
+fi
+
+for d in proc sys dev run;do
     echo "unmount $d"
     umount -lfR $altroot/$d
 done
 
-# download rEFInd
-if (( install_bootmng == 1)); then
-    apt install -y zip
+if [[ $bootmng != "grub" ]]; then
+    # download rEFInd
+    if [[ $bootmng == "refind" ]]; then
+	apt install -y zip
 
-    if [[ ! -d refind-bin-${refind_ver} ]]; then
-	if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
-	    wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
+	if [[ ! -d refind-bin-${refind_ver} ]]; then
+	    if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
+		wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
 
-	    if [[ -s refind-bin-${refind_ver}.zip ]] ; then
-		echo Got refind-bin-${refind_ver}.zip
-	    else
-		echo Failed to download refind-bin-${refind_ver}.zip
-		exit
+		if [[ -s refind-bin-${refind_ver}.zip ]] ; then
+		    echo Got refind-bin-${refind_ver}.zip
+		else
+		    echo Failed to download refind-bin-${refind_ver}.zip
+		    exit
+		fi
 	    fi
+	    unzip refind-bin-${refind_ver}.zip > /dev/null
 	fi
-	unzip refind-bin-${refind_ver}.zip > /dev/null
-    fi
 
-    cat > /tmp/refind.conf <<EOF_CONF
+	cat > /tmp/refind.conf <<EOF_CONF
 timeout 10
 icons_dir EFI/boot/icons/
 scanfor manual
@@ -556,54 +650,55 @@ menuentry "$distri ZFS" {
     options "ro root=ZFS=$zfs_pool/$subvol/root"
 }
 EOF_CONF
-cat /tmp/refind.conf
-fi
-
-pushd . > /dev/null
-cd $altroot/boot
-ln -sf vmlinuz-$kernel_ver vmlinuz
-ln -sf initrd.img-$kernel_ver initrd.img
-popd > /dev/null
-
-if [[ ! -e /tmp/efi ]]; then
-    mkdir /tmp/efi
-fi
-for drive in ${drives[@]}; do
-    case "$drive" in
-	sd*)
-	    efi="${drive}1"
-	    ;;
-	nvme*)
-	    efi="${drive}p1"
-	    ;;
-	*)
-	    efi="${drive}1"
-	    ;;
-    esac
-
-    mount /dev/${efi} /tmp/efi
-    mkdir -p /tmp/efi/EFI/${distri,,}
-
-    rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
-
-    # add EFI boot entry
-    serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-    if (( install_bootmng == 1 )); then
-	# https://www.rodsbooks.com/refind/installing.html#linux
-	cp -pr refind-bin-${refind_ver}/refind /tmp/efi/EFI/
-	# optional
-	# remove useless binary and drivers
-	ls -d /tmp/efi/EFI/refind/* | grep -vE '_x64|icons' | xargs rm -rf
-
-	cp -p /tmp/refind.conf /tmp/efi/EFI/refind/
-
-	efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/refind/refind_x64.efi' -L "rEFInd $serial"
-
-    else
-	efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
+	cat /tmp/refind.conf
     fi
-    umount /tmp/efi
-done
+
+    pushd . > /dev/null
+    cd $altroot/boot
+    ln -sf vmlinuz-$kernel_ver vmlinuz
+    ln -sf initrd.img-$kernel_ver initrd.img
+    popd > /dev/null
+
+    if [[ ! -e /tmp/efi ]]; then
+	mkdir /tmp/efi
+    fi
+    for drive in ${drives[@]}; do
+	case "$drive" in
+	    sd*)
+		efi="${drive}1"
+		;;
+	    nvme*)
+		efi="${drive}p1"
+		;;
+	    *)
+		efi="${drive}1"
+		;;
+	esac
+
+	mount /dev/${efi} /tmp/efi
+	mkdir -p /tmp/efi/EFI/${distri,,}
+
+	rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
+
+	# add EFI boot entry
+	serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+	if [[ $bootmng == "refind" ]]; then
+	    # https://www.rodsbooks.com/refind/installing.html#linux
+	    cp -pr refind-bin-${refind_ver}/refind /tmp/efi/EFI/
+	    # optional
+	    # remove useless binary and drivers
+	    ls -d /tmp/efi/EFI/refind/* | grep -vE '_x64|icons' | xargs rm -rf
+
+	    cp -p /tmp/refind.conf /tmp/efi/EFI/refind/
+
+	    efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/refind/refind_x64.efi' -L "rEFInd $serial"
+
+	else
+	    efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
+	fi
+	umount /tmp/efi
+    done
+fi
 
 # make symlinks for ZFS drives
 udevadm trigger
