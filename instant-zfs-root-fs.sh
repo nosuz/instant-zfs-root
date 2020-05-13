@@ -350,7 +350,7 @@ echo Make $zpool_target
 echo -n "Last chance. Are you sure? [yes/NO] "
 read answer
 if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-    echo "make ZFS root on /dev/${drive[0]}"
+    echo "make ZFS root on ${drives[@]}"
 else
     echo "Cancelled"
     exit
