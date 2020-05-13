@@ -544,6 +544,13 @@ done
 
 chroot $altroot update-initramfs -u -k $kernel_ver
 
+# make simlinks to the current kernel and initrd
+pushd . > /dev/null
+cd $altroot/boot
+ln -sf vmlinuz-$kernel_ver vmlinuz
+ln -sf initrd.img-$kernel_ver initrd.img
+popd > /dev/null
+
 if [[ $bootmng == "grub" ]]; then
     if [[ -e $altroot/etc/default/grub ]]; then
 	mv $altroot/etc/default/grub $altroot/etc/default/grub.orig
@@ -652,12 +659,6 @@ menuentry "$distri ZFS" {
 EOF_CONF
 	cat /tmp/refind.conf
     fi
-
-    pushd . > /dev/null
-    cd $altroot/boot
-    ln -sf vmlinuz-$kernel_ver vmlinuz
-    ln -sf initrd.img-$kernel_ver initrd.img
-    popd > /dev/null
 
     if [[ ! -e /tmp/efi ]]; then
 	mkdir /tmp/efi
