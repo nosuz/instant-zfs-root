@@ -710,6 +710,11 @@ done
 
 # convert name from sdX to drive ID
 zpool export $zfs_pool
+while (( $? != 0 )); do
+    echo retry to export $zfs_pool
+    sleep 3
+    zpool export $zfs_pool
+done
 zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
 zpool status
 zpool export $zfs_pool
