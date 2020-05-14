@@ -4,8 +4,8 @@
 (( $EUID != 0 )) && exec sudo "$0" "$@"
 
 export PATH=$PATH:/usr/sbin:/sbin
-
-exec 1>> /var/log/update-efi.log 2>&1
+# redirect STDOUT and STDERR to logfile
+exec &>> /var/log/update-efi.log
 
 cd /boot
 
