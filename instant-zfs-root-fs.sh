@@ -39,10 +39,14 @@ grub_pkg=""
 vdev=""
 auto_trim=""
 zfs_compress="-O compression=lz4"
+zfs_copies=""
 
 # define usage
 usage(){
     cat <<EOF_HELP
+-2
+    Set to keep 2 copeis for each data. This might be rescue from some checksum errors. But this option DOES NOT protect from drive errors. Use a mirrored or RAID vdev for redundancy.
+
 -b <grub|refind>
     Install boot load manager.
 
@@ -83,8 +87,11 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "b:efhk:p:Rstuz:" opt; do
+while getopts "2b:efhk:p:Rstuz:" opt; do
     case "$opt" in
+	2)
+	    zfs_copies="-O copies=2"
+	    ;;
 	b)
 	    case $OPTARG in
 		grub)
@@ -480,7 +487,7 @@ mkdir $altroot
 # all ZFS features are enabled by default
 zpool create -R $altroot -f \
       -o ashift=12 -o autoexpand=on $auto_trim\
-      -O atime=off $zfs_compress \
+      -O atime=off $zfs_compress $zfs_copies\
       -O canmount=off -O mountpoint=none \
       $zfs_pool ${zpool_target}
 
