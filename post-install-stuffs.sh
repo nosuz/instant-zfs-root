@@ -8,6 +8,11 @@ export PATH=$PATH:/usr/sbin:/sbin
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
+zfs_pool=""
+if (( $# > 0 )); then
+    zfs_pool=$1
+fi
+
 # cancel autorun on reboot
 #crontab -l | sed -e "/^@reboot $SCRIPT_DIR\//s/^/#/"| awk '!a[$0]++' | crontab -
 crontab -l | perl -pe "s{^(\@reboot $SCRIPT_DIR/)}{#\1}" | awk '!a[$0]++' | crontab -
@@ -37,3 +42,7 @@ systemctl start update-efi
 
 cp $SCRIPT_DIR/trim-zfs-pools.sh /boot
 crontab -l | (cat ; echo "@monthly /boot/trim-zfs-pools.sh";) | crontab -
+
+if [[ -n zfs_pool ]]; then
+    zfs snapshot -r $zfs_pool@init
+fi

@@ -513,7 +513,7 @@ zpool status
 zfs list
 
 # run post install script at the next boot.
-crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh";) | crontab -
+crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh $zfs_pool";) | crontab -
 
 # copy system files
 echo ""
