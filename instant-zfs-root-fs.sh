@@ -48,7 +48,7 @@ usage(){
     Set to keep 2 copeis for each data. This might be rescue from some checksum errors. But this option DOES NOT protect from drive errors. Use a mirrored or RAID vdev for redundancy.
 
 -b <grub|refind>
-    Install boot load manager.
+    Install boot load manager. If this option was not set, the kernel will be directly loaded by EFI stub.
 
 -e
     Encrypt all file system by passphrase.
