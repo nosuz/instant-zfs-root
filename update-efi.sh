@@ -3,6 +3,8 @@
 # grant by ROOT is required
 (( $EUID != 0 )) && exec sudo "$0" "$@"
 
+export PATH=$PATH:/usr/sbin:/sbin
+
 exec 1>> /var/log/update-efi.log 2>&1
 
 cd /boot
