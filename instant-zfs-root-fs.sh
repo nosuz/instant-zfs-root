@@ -61,7 +61,7 @@ usage(){
     Encrypt all file system by the key file. This option override -e option.
     If specified path for disk, all contents in the disk are destroy and created a new patition table.
 
--p  pool_name
+-p pool_name
     specify pool name
 
 -R
