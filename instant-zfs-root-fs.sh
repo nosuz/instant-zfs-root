@@ -35,6 +35,7 @@ do_reboot=0
 encrypt_opts=""
 encrypt_key=""
 bootmng=""
+bootmng_timeout=5
 grub_pkg=""
 vdev=""
 auto_trim=""
@@ -46,6 +47,10 @@ usage(){
     cat <<EOF_HELP
 -2
     Set to keep 2 copeis for each data. This might be rescue from some checksum errors. But this option DOES NOT protect from drive errors. Use a mirrored or RAID vdev for redundancy.
+
+-a
+    Enable auto trim.
+    On the zpool manual, this option can put significant stress on the strage devices. So, they recommend periodical zpool trim command for lower end devices.
 
 -b <grub|refind>
     Install boot load manager. If this option was not set, the kernel will be directly loaded by EFI stub.
@@ -71,9 +76,8 @@ usage(){
     Single ZFS filesystem. /(root) and /home are placed
     on the same filesystem.
 
--t
-    Enable auto trim.
-    On the zpool manual, this option can put significant stress on the strage devices. So, they recommend periodical zpool trim command for lower end devices.
+-t timeout_sec
+    Specify timeout for boot managers.
 
 -u
     Disable compression by LZ4.
@@ -87,10 +91,13 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "2b:efhk:p:Rstuz:" opt; do
+while getopts "2ab:efhk:p:Rst:uz:" opt; do
     case "$opt" in
 	2)
 	    zfs_copies="-O copies=2"
+	    ;;
+	a)
+	    auto_trim="-o autotrim=on"
 	    ;;
 	b)
 	    case $OPTARG in
@@ -136,8 +143,13 @@ while getopts "2b:efhk:p:Rstuz:" opt; do
 	    single_fs=1
 	    ;;
 	t)
-	    auto_trim="-o autotrim=on"
-	    ;;
+	    if [[ $OPTARG =~ ^[0-9]+$ ]]; then
+		bootmng_timeout=$OPTARG
+	    else
+		echo Set integer for timeout.
+		exit
+	    fi
+            ;;
 	u)
 	    zfs_compress=""
 	    ;;
@@ -565,8 +577,8 @@ if [[ $bootmng == "grub" ]]; then
     cat > $altroot/etc/default/grub <<EOF_GRUB
 GRUB_DEFAULT=0
 #GRUB_TIMEOUT_STYLE=hidden
-GRUB_TIMEOUT=5
-GRUB_RECORDFAIL_TIMEOUT=5
+GRUB_TIMEOUT=$bootmng_timeout
+GRUB_RECORDFAIL_TIMEOUT=$bootmng_timeout
 GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
 GRUB_CMDLINE_LINUX_DEFAULT=""
 GRUB_CMDLINE_LINUX=""
@@ -651,7 +663,7 @@ if [[ $bootmng != "grub" ]]; then
 	fi
 
 	cat > /tmp/refind.conf <<EOF_CONF
-timeout 10
+timeout $bootmng_timeout
 icons_dir EFI/boot/icons/
 scanfor manual
 scan_all_linux_kernels false
