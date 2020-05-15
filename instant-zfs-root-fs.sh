@@ -41,6 +41,7 @@ vdev=""
 auto_trim=""
 zfs_compress="-O compression=lz4"
 zfs_copies=""
+zfs_encrypt=0
 
 # define usage
 usage(){
@@ -111,18 +112,15 @@ while getopts "2ab:e:fhp:Rst:uz:" opt; do
             esac
             ;;
         e)
+            zfs_encrypt=1
             case $OPTARG in
                 /)
-                    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
                     ;;
                 *)
-                    # https://github.com/openzfs/zfs/issues/6556
-                    # parted -s /dev/usbdevice mklabel gpt mkpart key 2048s 2048s
-                    # tr -d '\n' < /dev/urandom | dd of=/dev/disk/by-partlabel/key
                     if [[ -b $OPTARG ]]; then
                         encrypt_key=$OPTARG
                     else
-                        echo Does not exist key: $OPTARG
+                        echo No path for key file: $OPTARG
                         exit
                     fi
                     ;;
@@ -239,6 +237,14 @@ case "$distri" in
         exit
         ;;
 esac
+
+# GRUB can't recognize not all ZFS features like encryption.
+if [[ $bootmng == "grub" ]] && (( $zfs_encrypt == 1 )); then
+    echo
+    echo "Grub can't boot system on encrypted ZFS."
+    echo Use the rEFInd boot manager or EFIstub.
+    exit
+fi
 
 echo
 echo Setup ZFS
@@ -379,67 +385,66 @@ else
     exit
 fi
 
-# check encryption key file is disk or partition
-if [[ -n $encrypt_key ]]; then
-    echo ""
-    type=$(lsblk -d -o TYPE $encrypt_key | tail -n 1)
-    case $type in
-        disk)
-            key_file=/dev/disk/by-partlabel/zfs_key
-            echo disk: $encrypt_key
-            echo Are you sure to destroy or remove all contents in this disk?
-            echo yes: Clear all contents in this disk and make encryotion key drive.
-            echo NO: Keep every things and exit.
-            echo -n "[yes/NO] "
-            read answer
-            if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-                parted -s $encrypt_key mklabel gpt mkpart zfs_key 2048s 2048s
-                retries=0
-                while [[ ! -e $key_file ]]; do
-                    if (( $retries > 5 )); then
-                        echo Too many retries.
-                        exit
-                    else
-                        let retries++
-                    fi
+if (( $zfs_encrypt == 1 )); then
+    if [[ -z $encrypt_key ]]; then
+        encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
+    else
+        # https://github.com/openzfs/zfs/issues/6556
+        # parted -s /dev/usbdevice mklabel gpt mkpart key 2048s 2048s
+        # tr -d '\n' < /dev/urandom | dd of=/dev/disk/by-partlabel/key
 
-                    echo waiting key file.
-                    sleep 2
-                done
-                tr -d '\n' < /dev/urandom | dd bs=512 count=1 of=$key_file
-            else
+        # check encryption key file is disk or partition
+        echo
+        echo Prepare encryption key file.
+        type=$(lsblk -d -o TYPE $encrypt_key | tail -n 1)
+        case $type in
+            disk)
+                key_file=/dev/disk/by-partlabel/zfs_key
+                echo disk: $encrypt_key
+                echo Are you sure to destroy or remove all contents in this disk?
+                echo yes: Clear all contents in this disk and make encryotion key drive.
+                echo NO: Keep every things and exit.
+                echo -n "[yes/NO] "
+                read answer
+                if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+                    parted -s $encrypt_key mklabel gpt mkpart zfs_key 2048s 2048s
+                    retries=0
+                    while [[ ! -e $key_file ]]; do
+                        if (( $retries > 5 )); then
+                            echo Too many retries.
+                            exit
+                        else
+                            let retries++
+                        fi
+
+                        echo waiting key file.
+                        sleep 2
+                    done
+                    tr -d '\n' < /dev/urandom | dd bs=512 count=1 of=$key_file
+                else
+                    exit
+                fi
+                ;;
+            part)
+                echo partition: $encrypt_key
+                echo Do you want to make a new key in this partition?
+                echo yes: Create new encryption key.
+                echo NO: Use current content as encryption key.
+                echo -n "[yes/NO] "
+                read answer
+                if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+                    (tr -d '\n' < /dev/urandom | dd bs=512 count=1; echo "") > $encrypt_key
+                fi
+                key_file=$encrypt_key
+                ;;
+            *)
+                echo unknow type $type for $encrypt_key
                 exit
-            fi
-            ;;
-        part)
-            echo partition: $encrypt_key
-            echo Do you want to make a new key in this partition?
-            echo yes: Create new encryption key.
-            echo NO: Use current content as encryption key.
-            echo -n "[yes/NO] "
-            read answer
-            if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-                (tr -d '\n' < /dev/urandom | dd bs=512 count=1; echo "") > $encrypt_key
-            fi
-            key_file=$encrypt_key
-            ;;
-        *)
-            echo unknow type $type for $encrypt_key
-            exit
-            ;;
-    esac
-    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=file://$key_file"
-fi
-if [[ -n $encrypt_opts ]]; then
+                ;;
+        esac
+        encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=file://$key_file"
+    fi
     echo $encrypt_opts
-fi
-
-# GRUB can't recognize not all ZFS features like encryption.
-if [[ -n $encrypt_opts ]] && [[ $bootmng == "grub" ]]; then
-    echo
-    echo "Grub can't boot system on encrypted ZFS."
-    echo Use the rEFInd boot manager or EFIstub.
-    exit
 fi
 
 echo
