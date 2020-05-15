@@ -196,6 +196,8 @@ while (( $# > 0 )); do
     shift
 done
 
+echo
+echo Check distribution
 # get Ubuntu Release
 distri=$(lsb_release -i | awk '{print $3}')
 release=$(lsb_release -r | awk '{print $2}')
@@ -238,7 +240,8 @@ case "$distri" in
         ;;
 esac
 
-
+echo
+echo Setup ZFS
 arch=$(uname -m)
 if [[ $arch != x86_64 ]]; then
     echo ZFS is available only on 64-bit OS.
@@ -439,6 +442,8 @@ if [[ -n $encrypt_opts ]] && [[ $bootmng == "grub" ]]; then
     exit
 fi
 
+echo
+echo Install pakcages.
 apt update
 if (( $? != 0 )); then
     echo Failed to update packages information.
@@ -454,6 +459,8 @@ if (( $? != 0 )); then
     exit
 fi
 
+echo
+echo Install udev rule.
 # install udev rules
 # make link to the member of ZFS in /dev
 if [[ ! -e /etc/udev/rules.d/91-zfs-vdev.rules ]] ; then
@@ -469,6 +476,8 @@ fi
 # apply udev rules
 udevadm control --reload
 
+echo
+echo Setup GPT
 # detroy existing ZFS pool
 zpool destroy $zfs_pool
 
@@ -506,6 +515,8 @@ done
 [[ -e $altroot ]] && rm -rf $altroot
 mkdir $altroot
 
+echo
+echo Create zpool
 # create ZFS pool
 # all ZFS features are enabled by default
 zpool create -R $altroot -f \
@@ -514,6 +525,8 @@ zpool create -R $altroot -f \
       -O canmount=off -O mountpoint=none \
       $zfs_pool ${zpool_target}
 
+echo
+echo Create zfs
 # make top subvolume
 # https://www.reddit.com/r/zfs/comments/bnvdco/zol_080_encryption_dont_encrypt_the_pool_root/
 zfs create \
@@ -535,6 +548,8 @@ fi
 zpool status
 zfs list
 
+echo
+echo Make post installation script entry in crontab.
 # run post install script at the next boot.
 crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh $zfs_pool";) | crontab -
 
@@ -550,6 +565,8 @@ crontab -l | perl -pe "s{^(\@reboot $SCRIPT_DIR/)}{#\1}" | awk '!a[$0]++' | cron
 echo "Copying /home to $altroot/home."
 rsync --info=progress2 -a /home/ $altroot/home
 
+echo
+echo Edit /etc/fstab
 # comment out all
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
 echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
@@ -564,6 +581,8 @@ if [[ -e $altroot/etc/zfs/zpool.cache ]]; then
     rm $altroot/etc/zfs/zpool.cache
 fi
 
+echo
+echo Update initrd
 # update initramfs
 # mount /run to avoid next warnings.
 # WARNING: Device /dev/XXX not initialized in udev database even after waiting 10000000 microseconds.
@@ -582,6 +601,8 @@ ln -sf initrd.img-$kernel_ver initrd.img
 popd > /dev/null
 
 if [[ $bootmng == "grub" ]]; then
+    echo
+    echo Install GRUB
     if [[ -e $altroot/etc/default/grub ]]; then
         mv $altroot/etc/default/grub $altroot/etc/default/grub.orig
     fi
@@ -657,6 +678,8 @@ done
 if [[ $bootmng != "grub" ]]; then
     # download rEFInd
     if [[ $bootmng == "refind" ]]; then
+        echo
+        echo Install rEFInd.
         apt install -y zip
 
         if [[ ! -d refind-bin-${refind_ver} ]]; then
