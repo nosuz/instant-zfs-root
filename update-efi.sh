@@ -44,10 +44,10 @@ mkdir /tmp/efi
 efi_uuid=$(lsblk -o MOUNTPOINT,UUID | awk -e '{if ($1 == "/boot/efi") print $2}')
 for uuid in $(lsblk -o LABEL,UUID | awk -e '{if ($1 == "EFI") print $2}'); do
     if [[ $efi_uuid = $uuid ]]; then
-	echo current EFI partition: $efi_uuid
-	continue
+        echo current EFI partition: $efi_uuid
+        continue
     else
-	echo mount $uuid
+        echo mount $uuid
     fi
 
     # mount EFI partition

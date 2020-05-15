@@ -18,8 +18,8 @@ if [[ ! -d /sys/firmware/efi ]]; then
     echo -n "Does this machine support EFI boot? [yes/NO] "
     read answer
     if [[ ! $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-	echo This script requires EFI boot.
-	exit
+        echo This script requires EFI boot.
+        exit
     fi
 fi
 
@@ -83,7 +83,7 @@ usage(){
     Specify vdev to create.
 
 specify ZFS drives:
-	-- drive1 drive2
+        -- drive1 drive2
 
 EOF_HELP
 }
@@ -91,89 +91,89 @@ EOF_HELP
 while getopts "2ab:e:fhp:Rst:uz:" opt; do
     case "$opt" in
 	2)
-	    zfs_copies="-O copies=2"
-	    ;;
-	a)
-	    auto_trim="-o autotrim=on"
-	    ;;
-	b)
-	    case $OPTARG in
-		grub)
-		    bootmng="grub"
-		    ;;
-		refind)
-		    bootmng="refind"
-		    ;;
-		*)
-		    echo set grub or refind.
-		    exit
-		    ;;
-	    esac
-	    ;;
-	e)
-	    case $OPTARG in
-                /)
-		    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
+            zfs_copies="-O copies=2"
+            ;;
+        a)
+            auto_trim="-o autotrim=on"
+            ;;
+        b)
+            case $OPTARG in
+                grub)
+                    bootmng="grub"
+                    ;;
+                refind)
+                    bootmng="refind"
                     ;;
                 *)
-	            # https://github.com/openzfs/zfs/issues/6556
-	            # parted -s /dev/usbdevice mklabel gpt mkpart key 2048s 2048s
-	            # tr -d '\n' < /dev/urandom | dd of=/dev/disk/by-partlabel/key
-	            if [[ -b $OPTARG ]]; then
-		        encrypt_key=$OPTARG
-	            else
-		        echo Does not exist key: $OPTARG
-		        exit
-	            fi
-	            ;;
+                    echo set grub or refind.
+                    exit
+                    ;;
             esac
             ;;
-	f)
-	    edit_fstab=1
-	    ;;
-	h)
-	    usage
-	    ;;
-	p)
-	    zfs_pool=$OPTARG
-	    ;;
-	R)
-	    do_reboot=1
-	    ;;
-	s)
-	    single_fs=1
-	    ;;
-	t)
-	    if [[ $OPTARG =~ ^[0-9]+$ ]]; then
-		bootmng_timeout=$OPTARG
-	    else
-		echo Set integer for timeout.
-		exit
-	    fi
+        e)
+            case $OPTARG in
+                /)
+                    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
+                    ;;
+                *)
+                    # https://github.com/openzfs/zfs/issues/6556
+                    # parted -s /dev/usbdevice mklabel gpt mkpart key 2048s 2048s
+                    # tr -d '\n' < /dev/urandom | dd of=/dev/disk/by-partlabel/key
+                    if [[ -b $OPTARG ]]; then
+                        encrypt_key=$OPTARG
+                    else
+                        echo Does not exist key: $OPTARG
+                        exit
+                    fi
+                    ;;
+            esac
             ;;
-	u)
-	    zfs_compress=""
-	    ;;
-	z)
-	    case ${OPTARG,,} in
-		single|stripe)
-		    vdev="single"
-		    ;;
-		mirror)
-		    vdev="mirror"
-		    ;;
-		raid|raid1)
-		    vdev="raidz1"
-		    ;;
-		raid2)
-		    vdev="raidz2"
-		    ;;
-		*)
-		    echo unknow vdev name $OPTARG
-		    exit
-		    ;;
-	    esac
-	    ;;
+        f)
+            edit_fstab=1
+            ;;
+        h)
+            usage
+            ;;
+        p)
+            zfs_pool=$OPTARG
+            ;;
+        R)
+            do_reboot=1
+            ;;
+        s)
+            single_fs=1
+            ;;
+        t)
+            if [[ $OPTARG =~ ^[0-9]+$ ]]; then
+                bootmng_timeout=$OPTARG
+            else
+                echo Set integer for timeout.
+                exit
+            fi
+            ;;
+        u)
+            zfs_compress=""
+            ;;
+        z)
+            case ${OPTARG,,} in
+                single|stripe)
+                    vdev="single"
+                    ;;
+                mirror)
+                    vdev="mirror"
+                    ;;
+                raid|raid1)
+                    vdev="raidz1"
+                    ;;
+                raid2)
+                    vdev="raidz2"
+                    ;;
+                *)
+                    echo unknow vdev name $OPTARG
+                    exit
+                    ;;
+            esac
+            ;;
     esac
 done
 
@@ -188,10 +188,10 @@ zfs_drives=()
 while (( $# > 0 )); do
     dev=$(basename $1)
     if [[ -e /dev/disk/by_id/$dev ]]; then
-	dev=$(readlink /dev/disk/by_id/$dev)
-	zfs_drives+=($(basename $dev))
+        dev=$(readlink /dev/disk/by_id/$dev)
+        zfs_drives+=($(basename $dev))
     elif [[ -b /dev/$dev ]]; then
-	zfs_drives+=($dev)
+        zfs_drives+=($dev)
     fi
     shift
 done
@@ -203,39 +203,39 @@ kernel_ver=$(uname -r)
 
 case "$distri" in
     "Ubuntu")
-	subvol="UBUNTU"
-	case "$release" in
-	    19.04)
-		:
-		;;
-	    19.10)
-		:
-		;;
-	    20.04)
-		:
-		;;
-	    *)
-		echo Ubuntu $release is not supported by this script.
-		exit
-		;;
-	esac
-	;;
+        subvol="UBUNTU"
+        case "$release" in
+            19.04)
+                :
+                ;;
+            19.10)
+                :
+                ;;
+            20.04)
+                :
+                ;;
+            *)
+                echo Ubuntu $release is not supported by this script.
+                exit
+                ;;
+        esac
+        ;;
     "LinuxMint")
-	subvol="MINT"
-	case "$release" in
-	    19.3)
-		:
-		;;
-	    *)
-		echo Linux mint $release is not supported by this script.
-		exit
-		;;
-	esac
-	;;
+        subvol="MINT"
+        case "$release" in
+            19.3)
+                :
+                ;;
+            *)
+                echo Linux mint $release is not supported by this script.
+                exit
+                ;;
+        esac
+        ;;
     *)
-	echo $distri is not supported by this script.
-	exit
-	;;
+        echo $distri is not supported by this script.
+        exit
+        ;;
 esac
 
 
@@ -251,11 +251,11 @@ root_drive=$(mount | grep ' / ' | awk '{print $1}' | sed -e 's/[0-9]$//')
 drives=()
 if (( ${#zfs_drives[@]} == 0 )); then
     while read drive; do
-	drives+=(${drive##/dev/})
+        drives+=(${drive##/dev/})
     done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9] 2> /dev/null |grep -v $root_drive)
 else
     for drive in ${zfs_drives[@]}; do
-	drives+=($drive)
+        drives+=($drive)
     done
 fi
 if (( ${#drives[@]} == 0 )); then
@@ -279,30 +279,30 @@ EOF_DRIVE_HEADER
 targets=()
 for drive in ${drives[@]}; do
     case "$drive" in
-	sd*)
-	    cat <<EOF_DRIVE
+        sd*)
+            cat <<EOF_DRIVE
 ${drive}
   ${drive}1 UEFI
   ${drive}2 ZFS pool
 EOF_DRIVE
-	    targets+=(${drive}2)
-	    ;;
-	nvme*)
-	    cat <<EOF_DRIVE
+            targets+=(${drive}2)
+            ;;
+        nvme*)
+            cat <<EOF_DRIVE
 ${drive}
   ${drive}p1 UEFI
   ${drive}p2 ZFS pool
 EOF_DRIVE
-	    targets+=(${drive}p2)
-	    ;;
-	*)
-	    cat <<EOF_DRIVE
+            targets+=(${drive}p2)
+            ;;
+        *)
+            cat <<EOF_DRIVE
 ${drive}
   ${drive}1 UEFI
   ${drive}2 ZFS pool
 EOF_DRIVE
-	    targets+=(${drive}2)
-	    ;;
+            targets+=(${drive}2)
+            ;;
     esac
 done
 
@@ -314,53 +314,53 @@ EOF_DRIVE_FOOTER
 
 if [[ -z $vdev ]]; then
     case "${#drives[@]}" in
-	1)
-	    zpool_type="Single drive pool"
-	    zpool_target="${targets[@]}"
-	    ;;
-	2)
-	    zpool_type="Mirror pool"
-	    zpool_target="mirror ${targets[@]}"
-	    ;;
-	3)
-	    zpool_type="RAIDZ pool"
-	    zpool_target="raidz ${targets[@]}"
-	    ;;
-	4)
-	    zpool_type="RAIDZ2 pool"
-	    zpool_target="raidz2 ${targets[@]}"
-	    ;;
+        1)
+            zpool_type="Single drive pool"
+            zpool_target="${targets[@]}"
+            ;;
+        2)
+            zpool_type="Mirror pool"
+            zpool_target="mirror ${targets[@]}"
+            ;;
+        3)
+            zpool_type="RAIDZ pool"
+            zpool_target="raidz ${targets[@]}"
+            ;;
+        4)
+            zpool_type="RAIDZ2 pool"
+            zpool_target="raidz2 ${targets[@]}"
+            ;;
     esac
 else
     case $vdev in
-	single)
-	    zpool_type="Single or striped drive pool"
-	    zpool_target="${targets[@]}"
-	    ;;
-	mirror)
-	    if (( ${#drives[@]} < 2 )); then
-		echo At least 2 drives are required.
-		exit
-	    fi
-	    zpool_type="Mirror pool"
-	    zpool_target="mirror ${targets[@]}"
-	    ;;
-	raid|raid1)
-	    if (( ${#drives[@]} < 3 )); then
-		echo At least 3 drives are required.
-		exit
-	    fi
-	    zpool_type="RAIDZ pool"
-	    zpool_target="raidz ${targets[@]}"
-	    ;;
-	raid2)
-	    if (( ${#drives[@]} < 4 )); then
-		echo At least 4 drives are required.
-		exit
-	    fi
-	    zpool_type="RAIDZ2 pool"
-	    zpool_target="raidz2 ${targets[@]}"
-	    ;;
+        single)
+            zpool_type="Single or striped drive pool"
+            zpool_target="${targets[@]}"
+            ;;
+        mirror)
+            if (( ${#drives[@]} < 2 )); then
+                echo At least 2 drives are required.
+                exit
+            fi
+            zpool_type="Mirror pool"
+            zpool_target="mirror ${targets[@]}"
+            ;;
+        raid|raid1)
+            if (( ${#drives[@]} < 3 )); then
+                echo At least 3 drives are required.
+                exit
+            fi
+            zpool_type="RAIDZ pool"
+            zpool_target="raidz ${targets[@]}"
+            ;;
+        raid2)
+            if (( ${#drives[@]} < 4 )); then
+                echo At least 4 drives are required.
+                exit
+            fi
+            zpool_type="RAIDZ2 pool"
+            zpool_target="raidz2 ${targets[@]}"
+            ;;
     esac
 fi
 
@@ -381,41 +381,49 @@ if [[ -n $encrypt_key ]]; then
     echo ""
     type=$(lsblk -d -o TYPE $encrypt_key | tail -n 1)
     case $type in
-	disk)
-	    key_file=/dev/disk/by-partlabel/zfs_key
-	    echo disk: $encrypt_key
-	    echo Are you sure to destroy or remove all contents in this disk?
-	    echo yes: Clear all contents in this disk and make encryotion key drive.
-	    echo NO: Keep every things and exit.
-	    echo -n "[yes/NO] "
-	    read answer
-	    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-		parted -s $encrypt_key mklabel gpt mkpart zfs_key 2048s 2048s
-		while [[ ! -e $key_file ]]; do
-		    echo waiting key file.
-		    sleep 2
-		done
-		tr -d '\n' < /dev/urandom | dd bs=512 count=1 of=$key_file
-	    else
-		exit
-	    fi
-	    ;;
-	part)
-	    echo partition: $encrypt_key
-	    echo Do you want to make a new key in this partition?
-	    echo yes: Create new encryption key.
-	    echo NO: Use current content as encryption key.
-	    echo -n "[yes/NO] "
-	    read answer
-	    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-		(tr -d '\n' < /dev/urandom | dd bs=512 count=1; echo "") > $encrypt_key
-	    fi
-	    key_file=$encrypt_key
-	    ;;
-	*)
-	    echo unknow type $type for $encrypt_key
-	    exit
-	    ;;
+        disk)
+            key_file=/dev/disk/by-partlabel/zfs_key
+            echo disk: $encrypt_key
+            echo Are you sure to destroy or remove all contents in this disk?
+            echo yes: Clear all contents in this disk and make encryotion key drive.
+            echo NO: Keep every things and exit.
+            echo -n "[yes/NO] "
+            read answer
+            if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+                parted -s $encrypt_key mklabel gpt mkpart zfs_key 2048s 2048s
+                retries=0
+                while [[ ! -e $key_file ]]; do
+                    if (( $retries > 5 )); then
+                        echo Too many retries.
+                        exit
+                    else
+                        let retries++
+                    fi
+
+                    echo waiting key file.
+                    sleep 2
+                done
+                tr -d '\n' < /dev/urandom | dd bs=512 count=1 of=$key_file
+            else
+                exit
+            fi
+            ;;
+        part)
+            echo partition: $encrypt_key
+            echo Do you want to make a new key in this partition?
+            echo yes: Create new encryption key.
+            echo NO: Use current content as encryption key.
+            echo -n "[yes/NO] "
+            read answer
+            if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+                (tr -d '\n' < /dev/urandom | dd bs=512 count=1; echo "") > $encrypt_key
+            fi
+            key_file=$encrypt_key
+            ;;
+        *)
+            echo unknow type $type for $encrypt_key
+            exit
+            ;;
     esac
     encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=file://$key_file"
 fi
@@ -467,15 +475,15 @@ zpool destroy $zfs_pool
 # setup GPT on target drive
 for drive in ${drives[@]}; do
     case "$drive" in
-	sd*)
-	    efi="${drive}1"
-	    ;;
-	nvme*)
-	    efi="${drive}p1"
-	    ;;
-	*)
-	    efi="${drive}1"
-	    ;;
+        sd*)
+            efi="${drive}1"
+            ;;
+        nvme*)
+            efi="${drive}p1"
+            ;;
+        *)
+            efi="${drive}1"
+            ;;
     esac
 
     sgdisk --zap-all /dev/$drive
@@ -520,8 +528,8 @@ zfs create \
 if (( $single_fs != 1 )); then
     # make subvolume for /home and copy on it.
     zfs create \
-	-o mountpoint=/home \
-	$zfs_pool/$subvol/home
+        -o mountpoint=/home \
+        $zfs_pool/$subvol/home
 fi
 
 zpool status
@@ -575,7 +583,7 @@ popd > /dev/null
 
 if [[ $bootmng == "grub" ]]; then
     if [[ -e $altroot/etc/default/grub ]]; then
-	mv $altroot/etc/default/grub $altroot/etc/default/grub.orig
+        mv $altroot/etc/default/grub $altroot/etc/default/grub.orig
     fi
     cat > $altroot/etc/default/grub <<EOF_GRUB
 GRUB_DEFAULT=0
@@ -590,54 +598,54 @@ EOF_GRUB
     cat $altroot/etc/default/grub
 
     if [[ ! -d $altroot/tmp ]]; then
-	mkdir $altroot/tmp
+        mkdir $altroot/tmp
     fi
     mount -t tmpfs tmpfs $altroot/tmp
 
     for drive in ${drives[@]}; do
-	case "$drive" in
-	    sd*)
-		efi="${drive}1"
-		;;
-	    nvme*)
-		efi="${drive}p1"
-		;;
-	    *)
-		efi="${drive}1"
-		;;
-	esac
+        case "$drive" in
+            sd*)
+                efi="${drive}1"
+                ;;
+            nvme*)
+                efi="${drive}p1"
+                ;;
+            *)
+                efi="${drive}1"
+                ;;
+        esac
 
-	if [[ ! -d $altroot/boot/efi ]]; then
-	    mkdir -p $altroot/boot/efi
-	fi
-	mount /dev/${efi} $altroot/boot/efi
-	if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
-	    mkdir -p $altroot/boot/efi/EFI/${distri,,}
-	fi
+        if [[ ! -d $altroot/boot/efi ]]; then
+            mkdir -p $altroot/boot/efi
+        fi
+        mount /dev/${efi} $altroot/boot/efi
+        if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
+            mkdir -p $altroot/boot/efi/EFI/${distri,,}
+        fi
 
-	rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
+        rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
 
-	echo
-	echo Install Grub to $drive
-	chroot $altroot update-grub
-	chroot $altroot grub-install \
-	       --efi-directory=/boot/efi \
-	       --bootloader-id=${distri,,} \
-	       --recheck --no-floppy
+        echo
+        echo Install Grub to $drive
+        chroot $altroot update-grub
+        chroot $altroot grub-install \
+               --efi-directory=/boot/efi \
+               --bootloader-id=${distri,,} \
+               --recheck --no-floppy
 
-	umount $altroot/boot/efi
+        umount $altroot/boot/efi
     done
 
     umount $altroot/tmp
 
     for drive in ${drives[@]}; do
-	# Grub-install make only one boot entry.
-	# Install endividual boot entry.
-    	serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-	echo Make boot entry for $drive $serial
-	efibootmgr -c -d /dev/$drive -p 1 \
-		   -l '/EFI/ubuntu/shimx64.efi' \
-		   -L "$distri ZFS $serial"
+        # Grub-install make only one boot entry.
+        # Install endividual boot entry.
+        serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+        echo Make boot entry for $drive $serial
+        efibootmgr -c -d /dev/$drive -p 1 \
+                   -l '/EFI/ubuntu/shimx64.efi' \
+                   -L "$distri ZFS $serial"
     done
 fi
 
@@ -649,23 +657,23 @@ done
 if [[ $bootmng != "grub" ]]; then
     # download rEFInd
     if [[ $bootmng == "refind" ]]; then
-	apt install -y zip
+        apt install -y zip
 
-	if [[ ! -d refind-bin-${refind_ver} ]]; then
-	    if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
-		wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
+        if [[ ! -d refind-bin-${refind_ver} ]]; then
+            if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
+                wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
 
-		if [[ -s refind-bin-${refind_ver}.zip ]] ; then
-		    echo Got refind-bin-${refind_ver}.zip
-		else
-		    echo Failed to download refind-bin-${refind_ver}.zip
-		    exit
-		fi
-	    fi
-	    unzip refind-bin-${refind_ver}.zip > /dev/null
-	fi
+                if [[ -s refind-bin-${refind_ver}.zip ]] ; then
+                    echo Got refind-bin-${refind_ver}.zip
+                else
+                    echo Failed to download refind-bin-${refind_ver}.zip
+                    exit
+                fi
+            fi
+            unzip refind-bin-${refind_ver}.zip > /dev/null
+        fi
 
-	cat > /tmp/refind.conf <<EOF_CONF
+        cat > /tmp/refind.conf <<EOF_CONF
 timeout $bootmng_timeout
 icons_dir EFI/boot/icons/
 scanfor manual
@@ -679,63 +687,79 @@ menuentry "$distri ZFS" {
     options "ro root=ZFS=$zfs_pool/$subvol/root"
 }
 EOF_CONF
-	cat /tmp/refind.conf
+        cat /tmp/refind.conf
     fi
 
     if [[ ! -e /tmp/efi ]]; then
-	mkdir /tmp/efi
+        mkdir /tmp/efi
     fi
     for drive in ${drives[@]}; do
-	case "$drive" in
-	    sd*)
-		efi="${drive}1"
-		;;
-	    nvme*)
-		efi="${drive}p1"
-		;;
-	    *)
-		efi="${drive}1"
-		;;
-	esac
+        case "$drive" in
+            sd*)
+                efi="${drive}1"
+                ;;
+            nvme*)
+                efi="${drive}p1"
+                ;;
+            *)
+                efi="${drive}1"
+                ;;
+        esac
 
-	mount /dev/${efi} /tmp/efi
-	mkdir -p /tmp/efi/EFI/${distri,,}
+        mount /dev/${efi} /tmp/efi
+        mkdir -p /tmp/efi/EFI/${distri,,}
 
-	rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
+        rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
 
-	# add EFI boot entry
-	serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-	if [[ $bootmng == "refind" ]]; then
-	    # https://www.rodsbooks.com/refind/installing.html#linux
-	    cp -pr refind-bin-${refind_ver}/refind /tmp/efi/EFI/
-	    # optional
-	    # remove useless binary and drivers
-	    ls -d /tmp/efi/EFI/refind/* | grep -vE '_x64|icons' | xargs rm -rf
+        # add EFI boot entry
+        serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+        if [[ $bootmng == "refind" ]]; then
+            # https://www.rodsbooks.com/refind/installing.html#linux
+            cp -pr refind-bin-${refind_ver}/refind /tmp/efi/EFI/
+            # optional
+            # remove useless binary and drivers
+            ls -d /tmp/efi/EFI/refind/* | grep -vE '_x64|icons' | xargs rm -rf
 
-	    cp -p /tmp/refind.conf /tmp/efi/EFI/refind/
+            cp -p /tmp/refind.conf /tmp/efi/EFI/refind/
 
-	    efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/refind/refind_x64.efi' -L "rEFInd $serial"
+            efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/refind/refind_x64.efi' -L "rEFInd $serial"
 
-	else
-	    efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
-	fi
-	umount /tmp/efi
+        else
+            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
+        fi
+        umount /tmp/efi
     done
 fi
 
 # make symlinks for ZFS drives
 udevadm trigger
 
+retries=0
 while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
+    if (( $retries > 5 )); then
+        echo Too many retries.
+        exit
+    else
+        let retries++
+    fi
+
     echo waiting ZFS vol come up in /dev/disk/zfs
-    sleep 3 # wait to come up dist/zfs
+    sleep 2 # wait to come up dist/zfs
 done
 
 # convert name from sdX to drive ID
 zpool export $zfs_pool
+retries=0
 while (( $? != 0 )); do
+    if (( $retries > 5 )); then
+        echo Too many retries.
+        exit
+    else
+        let retries++
+    fi
+
     echo retry to export $zfs_pool
-    sleep 3
+    sleep 2
     zpool export $zfs_pool
 done
 zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
@@ -750,6 +774,6 @@ else
     echo -n "Reboot now? [yes/NO] "
     read answer
     if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-	reboot
+        reboot
     fi
 fi
