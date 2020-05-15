@@ -55,16 +55,13 @@ usage(){
 -b <grub|refind>
     Install boot load manager. If this option was not set, the kernel will be directly loaded by EFI stub.
 
--e
-    Encrypt all file system by passphrase.
-    If -k option is set at the same time, file system is encrypted by the key file.
+-e keyfile_path
+    Encrypt all file systems.
+    If set / as key file, the file systems are encrypted by passphrase.
+    If a keyfile_path is specified, it is used as encryption key file. Be care all contents are destroy and created a new patition table if keyfile_path was whole disk.
 
 -f
     Stop to edit /etc/fstab file.
-
--k keyfile_path
-    Encrypt all file system by the key file. This option override -e option.
-    If specified path for disk, all contents in the disk are destroy and created a new patition table.
 
 -p pool_name
     specify pool name
@@ -91,7 +88,7 @@ specify ZFS drives:
 EOF_HELP
 }
 
-while getopts "2ab:efhk:p:Rst:uz:" opt; do
+while getopts "2ab:e:fhp:Rst:uz:" opt; do
     case "$opt" in
 	2)
 	    zfs_copies="-O copies=2"
@@ -114,24 +111,28 @@ while getopts "2ab:efhk:p:Rst:uz:" opt; do
 	    esac
 	    ;;
 	e)
-	    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
-	    ;;
+	    case $OPTARG in
+                /)
+		    encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt"
+                    ;;
+                *)
+	            # https://github.com/openzfs/zfs/issues/6556
+	            # parted -s /dev/usbdevice mklabel gpt mkpart key 2048s 2048s
+	            # tr -d '\n' < /dev/urandom | dd of=/dev/disk/by-partlabel/key
+	            if [[ -b $OPTARG ]]; then
+		        encrypt_key=$OPTARG
+	            else
+		        echo Does not exist key: $OPTARG
+		        exit
+	            fi
+	            ;;
+            esac
+            ;;
 	f)
 	    edit_fstab=1
 	    ;;
 	h)
 	    usage
-	    ;;
-	k)
-	    # https://github.com/openzfs/zfs/issues/6556
-	    # parted -s /dev/usbdevice mklabel gpt mkpart key 2048s 2048s
-	    # tr -d '\n' < /dev/urandom | dd of=/dev/disk/by-partlabel/key
-	    if [[ -b $OPTARG ]]; then
-		encrypt_key=$OPTARG
-	    else
-		echo Does not exit key: $OPTARG
-		exit
-	    fi
 	    ;;
 	p)
 	    zfs_pool=$OPTARG
@@ -417,6 +418,8 @@ if [[ -n $encrypt_key ]]; then
 	    ;;
     esac
     encrypt_opts="-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=file://$key_file"
+fi
+if [[ -n $encrypt_opts ]]; then
     echo $encrypt_opts
 fi
 
