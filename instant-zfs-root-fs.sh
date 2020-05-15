@@ -129,8 +129,9 @@ while getopts "2ab:e:fhp:Rst:uz:" opt; do
         f)
             edit_fstab=1
             ;;
-        h)
+        h|\?)
             usage
+            exit
             ;;
         p)
             zfs_pool=$OPTARG
