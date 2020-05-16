@@ -27,6 +27,7 @@ fi
 (( $EUID != 0 )) && exec sudo "$0" "$@"
 
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
+SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 single_fs=0
@@ -46,13 +47,10 @@ zfs_encrypt=0
 # define usage
 usage(){
     cat <<EOF_HELP
--2
-    Set to keep 2 copeis for each data. This might be rescue from some checksum errors. But this option DOES NOT protect from drive errors. Use a mirrored or RAID vdev for redundancy.
+Usage:
+    $SCRIPT_NAME [options] [zfs_drive]...
 
--a
-    Enable auto trim.
-    On the zpool manual, this option can put significant stress on the strage devices. So, they recommend periodical zpool trim command for lower end devices.
-
+Options:
 -b <grub|refind>
     Install boot load manager. If this option was not set, the kernel will be directly loaded by EFI stub.
 
@@ -83,22 +81,28 @@ usage(){
 -z <single|stripe|mirror|raidz|raidz1|raidz2>
     Specify vdev to create.
 
-specify ZFS drives:
-        -- drive1 drive2
+ZFS properties
+--autotrim
+    Enable auto trim.
+    On the zpool manual, enableing auto trim property puts significant stress on the strage devices. So, they recommend to run periodical zpool trim command for lower end devices.
+
+--copies=(2|3)
+    Set copies property on zpool. THis option might be rescue from some checksum errors. But this completeley DOES NOT protect from drive errors. Use a mirrored or RAID vdev for redundancy.
 
 EOF_HELP
 }
 
-while getopts "2ab:e:fhp:Rst:uz:" opt; do
-    case "$opt" in
-	2)
-            zfs_copies="-O copies=2"
-            ;;
-        a)
-            auto_trim="-o autotrim=on"
-            ;;
-        b)
-            case $OPTARG in
+while getopts "b:e:fhp:Rst:uz:-:" opt; do
+    # https://chitoku.jp/programming/bash-getopts-long-options#--foobar-%E3%81%A8---foo-bar-%E3%81%AE%E4%B8%A1%E6%96%B9%E3%82%92%E5%87%A6%E7%90%86%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95
+    optarg="$OPTARG"
+    [[ "$opt" = - ]] &&
+        opt="-${OPTARG%%=*}" &&
+        optarg="${OPTARG/${OPTARG%%=*}/}" &&
+        optarg="${optarg#=}"
+
+    case "-$opt" in
+        -b)
+            case $optarg in
                 grub)
                     bootmng="grub"
                     ;;
@@ -111,50 +115,50 @@ while getopts "2ab:e:fhp:Rst:uz:" opt; do
                     ;;
             esac
             ;;
-        e)
+        -e)
             zfs_encrypt=1
-            case $OPTARG in
+            case $optarg in
                 /)
                     ;;
                 *)
-                    if [[ -b $OPTARG ]]; then
-                        encrypt_key=$OPTARG
+                    if [[ -b $optarg ]]; then
+                        encrypt_key=$optarg
                     else
-                        echo No path for key file: $OPTARG
+                        echo No path for key file: $optarg
                         exit
                     fi
                     ;;
             esac
             ;;
-        f)
+        -f)
             edit_fstab=1
             ;;
-        h|\?)
+        -h|-\?)
             usage
             exit
             ;;
-        p)
-            zfs_pool=$OPTARG
+        -p)
+            zfs_pool=$optarg
             ;;
-        R)
+        -R)
             do_reboot=1
             ;;
-        s)
+        -s)
             single_fs=1
             ;;
-        t)
-            if [[ $OPTARG =~ ^[0-9]+$ ]]; then
-                bootmng_timeout=$OPTARG
+        -t)
+            if [[ $optarg =~ ^[0-9]+$ ]]; then
+                bootmng_timeout=$optarg
             else
                 echo Set integer for timeout.
                 exit
             fi
             ;;
-        u)
+        -u)
             zfs_compress=""
             ;;
-        z)
-            case ${OPTARG,,} in
+        -z)
+            case ${optarg,,} in
                 single|stripe)
                     vdev="single"
                     ;;
@@ -168,10 +172,21 @@ while getopts "2ab:e:fhp:Rst:uz:" opt; do
                     vdev="raidz2"
                     ;;
                 *)
-                    echo unknow vdev name $OPTARG
+                    echo unknow vdev name $optarg
                     exit
                     ;;
             esac
+            ;;
+	--copies)
+            if [[ $optarg =~ ^(2|3)$ ]]; then
+                zfs_copies="-O copies=$optarg"
+            else
+                echo copy number must be 1 to 3.
+                exit
+            fi
+            ;;
+        --autotrim)
+            auto_trim="-o autotrim=on"
             ;;
     esac
 done
