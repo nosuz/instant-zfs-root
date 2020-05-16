@@ -39,10 +39,9 @@ bootmng=""
 bootmng_timeout=5
 grub_pkg=""
 vdev=""
-auto_trim=""
-zfs_compress="-O compression=lz4"
-zfs_copies=""
+zfs_compress=1
 zfs_encrypt=0
+zpool_opts=()
 
 # define usage
 usage(){
@@ -155,7 +154,7 @@ while getopts "b:e:fhp:Rst:uz:-:" opt; do
             fi
             ;;
         -u)
-            zfs_compress=""
+            zfs_compress=0
             ;;
         -z)
             case ${optarg,,} in
@@ -179,14 +178,14 @@ while getopts "b:e:fhp:Rst:uz:-:" opt; do
             ;;
 	--copies)
             if [[ $optarg =~ ^(2|3)$ ]]; then
-                zfs_copies="-O copies=$optarg"
+                zpool_opts+=("-O copies=$optarg")
             else
                 echo copy number must be 1 to 3.
                 exit
             fi
             ;;
         --autotrim)
-            auto_trim="-o autotrim=on"
+            zpool_opts+=("-o autotrim=on")
             ;;
     esac
 done
@@ -196,6 +195,10 @@ done
 # shift options/arguments list
 shift $(($OPTIND - 1))
 echo $OPTIND
+
+if (( zfs_compress == 1 )); then
+    zpool_opts+=("-O compression=lz4")
+fi
 
 # parse additional arguments
 zfs_drives=()
@@ -538,12 +541,13 @@ mkdir $altroot
 
 echo
 echo Create zpool
+echo ${zpool_opts[@]}
 # create ZFS pool
 # all ZFS features are enabled by default
 zpool create -R $altroot -f \
-      -o ashift=12 -o autoexpand=on $auto_trim\
-      -O atime=off $zfs_compress $zfs_copies\
-      -O canmount=off -O mountpoint=none \
+      -o ashift=12 -o autoexpand=on \
+      -O atime=off -O canmount=off -O mountpoint=none \
+      ${zpool_opts[@]} \
       $zfs_pool ${zpool_target}
 
 echo
