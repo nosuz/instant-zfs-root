@@ -88,6 +88,9 @@ ZFS properties
 --copies=(2|3)
     Set copies property on zpool. THis option might be rescue from some checksum errors. But this completeley DOES NOT protect from drive errors. Use a mirrored or RAID vdev for redundancy.
 
+--snapdir
+    Set snapdir visible.
+
 EOF_HELP
 }
 
@@ -186,6 +189,9 @@ while getopts "b:e:fhp:Rst:uz:-:" opt; do
             ;;
         --autotrim)
             zpool_opts+=("-o autotrim=on")
+            ;;
+        --snapdir)
+            zpool_opts+=("-O snapdir=visible")
             ;;
     esac
 done
