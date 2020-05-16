@@ -51,7 +51,7 @@ Usage:
     $SCRIPT_NAME [options] [zfs_drive]...
 
 Options:
--b <grub|refind>
+-b (grub|refind)
     Install boot load manager. If this option was not set, the kernel will be directly loaded by EFI stub.
 
 -e keyfile_path
@@ -78,7 +78,7 @@ Options:
 -u
     Disable compression by LZ4.
 
--z <single|stripe|mirror|raidz|raidz1|raidz2>
+-z (single|stripe|mirror|raidz|raidz1|raidz2)
     Specify vdev to create.
 
 ZFS properties
