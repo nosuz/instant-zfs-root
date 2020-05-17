@@ -25,7 +25,7 @@ cat << EOF > /etc/systemd/system/update-efi.service
 [Unit]
 # Execute command before shutdown/reboot [duplicate]
 # https://askubuntu.com/questions/416299/execute-command-before-shutdown-reboot
-Description=Copy latest kernel to EFI patitions and update refind.conf
+Description=Copy latest kernel to EFI patitions.
 
 [Service]
 Type=oneshot
