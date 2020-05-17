@@ -805,7 +805,7 @@ done
 # convert name from sdX to drive ID
 zpool export $zfs_pool
 retries=0
-while (( $? != 0 )); do
+while (( $(zpool list | grep $zfs_pool | wc -l) != 0 )); do
     if (( $retries > 5 )); then
         echo Too many retries.
         exit
@@ -819,7 +819,21 @@ while (( $? != 0 )); do
 done
 zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
 zpool status
+
 zpool export $zfs_pool
+retries=0
+while (( $(zpool list | grep $zfs_pool | wc -l) != 0 )); do
+    if (( $retries > 5 )); then
+        echo Too many retries.
+        exit
+    else
+        let retries++
+    fi
+
+    echo retry to export $zfs_pool
+    sleep 2
+    zpool export $zfs_pool
+done
 
 # show final message
 echo Finished.
