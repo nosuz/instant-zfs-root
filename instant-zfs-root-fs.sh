@@ -435,12 +435,11 @@ if (( $zfs_encrypt == 1 )); then
                     parted -s $encrypt_key mklabel gpt mkpart zfs_key 2048s 2048s
                     retries=0
                     while [[ ! -e $key_file ]]; do
-                        if (( $retries > 5 )); then
+                        if (( $retries > 3 )); then
                             echo Too many retries.
                             exit
-                        else
-                            let retries++
                         fi
+                        let retries++
 
                         echo waiting key file.
                         sleep 2
@@ -791,12 +790,11 @@ udevadm trigger
 
 retries=0
 while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
-    if (( $retries > 5 )); then
+    if (( $retries > 3 )); then
         echo Too many retries.
         exit
-    else
-        let retries++
     fi
+    let retries++
 
     echo waiting ZFS vol come up in /dev/disk/zfs
     sleep 2 # wait to come up dist/zfs
@@ -806,12 +804,11 @@ done
 zpool export $zfs_pool
 retries=0
 while (( $(zpool list | grep -c "^$zfs_pool ") != 0 )); do
-    if (( $retries > 5 )); then
+    if (( $retries > 3 )); then
         echo Too many retries.
         exit
-    else
-        let retries++
     fi
+    let retries++
 
     echo retry to export $zfs_pool
     sleep 2
@@ -823,12 +820,11 @@ zpool status
 zpool export $zfs_pool
 retries=0
 while (( $(zpool list | grep -c "^$zfs_pool ") != 0 )); do
-    if (( $retries > 5 )); then
+    if (( $retries > 3 )); then
         echo Too many retries.
         exit
-    else
-        let retries++
     fi
+    let retries++
 
     echo retry to export $zfs_pool
     sleep 2
