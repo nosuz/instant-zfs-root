@@ -200,7 +200,6 @@ done
 
 # shift options/arguments list
 shift $(($OPTIND - 1))
-echo $OPTIND
 
 if (( zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
@@ -219,7 +218,6 @@ while (( $# > 0 )); do
     shift
 done
 
-echo
 echo Check distribution
 # get Ubuntu Release
 distri=$(lsb_release -i | awk '{print $3}')
@@ -527,9 +525,15 @@ for drive in ${drives[@]}; do
 
     sgdisk --zap-all /dev/$drive
     sgdisk --clear /dev/$drive
-    sgdisk --new=1:1M:+512M --typecode=1:EF00 /dev/$drive
+    sgdisk --new=1:1M:+512M \
+           --typecode=1:EF00 \
+           --change-name=1:EFI \
+           /dev/$drive
 
-    sgdisk -n 2:0:0 -t 2:8300 /dev/$drive # Linux Filesystem
+    sgdisk -n 2:0:0 \
+           -t 2:8300 \
+           -c 2:ZFS \
+           /dev/$drive # Linux Filesystem
     # All same size drives have same number of sectors?
     # I am not sure. ZFS dones not accept smaller dirves for replace.
     # create 1G smaller partition
