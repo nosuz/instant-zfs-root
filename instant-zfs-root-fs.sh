@@ -219,7 +219,7 @@ while (( $# > 0 )); do
 done
 
 echo Check distribution
-# get Ubuntu Release
+# get Release info.
 distri=$(lsb_release -i | awk '{print $3}')
 release=$(lsb_release -r | awk '{print $2}')
 kernel_ver=$(uname -r)
