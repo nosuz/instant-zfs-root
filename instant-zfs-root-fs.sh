@@ -37,6 +37,7 @@ encrypt_opts=""
 encrypt_key=""
 bootmng=""
 bootmng_timeout=5
+boot_opts="quiet splash"
 grub_pkg=""
 vdev=""
 zfs_compress=1
@@ -77,6 +78,9 @@ Options:
 -u
     Disable compression by LZ4.
 
+-v
+    Show messages while booting.
+
 -z (single|stripe|mirror|raidz|raidz1|raidz2)
     Specify vdev to create.
 
@@ -94,7 +98,7 @@ ZFS properties
 EOF_HELP
 }
 
-while getopts "b:e:fhp:Rst:uz:-:" opt; do
+while getopts "b:e:fhp:Rst:uvz:-:" opt; do
     # https://chitoku.jp/programming/bash-getopts-long-options#--foobar-%E3%81%A8---foo-bar-%E3%81%AE%E4%B8%A1%E6%96%B9%E3%82%92%E5%87%A6%E7%90%86%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95
     optarg="$OPTARG"
     [[ "$opt" = - ]] &&
@@ -158,6 +162,9 @@ while getopts "b:e:fhp:Rst:uz:-:" opt; do
             ;;
         -u)
             zfs_compress=0
+            ;;
+        -v)
+            boot_opts=""
             ;;
         -z)
             case ${optarg,,} in
@@ -647,7 +654,7 @@ GRUB_DEFAULT=0
 GRUB_TIMEOUT=$bootmng_timeout
 GRUB_RECORDFAIL_TIMEOUT=$bootmng_timeout
 GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
-GRUB_CMDLINE_LINUX_DEFAULT=""
+GRUB_CMDLINE_LINUX_DEFAULT="$boot_opts"
 GRUB_CMDLINE_LINUX=""
 GRUB_TERMINAL=console
 EOF_GRUB
@@ -742,7 +749,7 @@ menuentry "$distri ZFS" {
     ostype Linux
     loader /EFI/${distri,,}/vmlinuz
     initrd /EFI/${distri,,}/initrd.img
-    options "ro root=ZFS=$zfs_pool/$subvol/root"
+    options "ro root=ZFS=$zfs_pool/$subvol/root $boot_opts"
 }
 EOF_CONF
         cat /tmp/refind.conf
@@ -783,7 +790,7 @@ EOF_CONF
             efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/refind/refind_x64.efi' -L "rEFInd $serial"
 
         else
-            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img"
+            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img $boot_opts"
         fi
         umount /tmp/efi
     done
