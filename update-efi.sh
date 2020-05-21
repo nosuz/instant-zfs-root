@@ -34,7 +34,7 @@ if (( $diff > 1 )); then
     ln -sf $initrd initrd.img
 fi
 
-rsync -av --copy-links --delete --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' --modify-window=1 /boot/ /boot/efi/EFI/${distri,,}
+rsync -av --copy-links --delete --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' --modify-window=1 /boot/ /boot/efi/EFI/${distri,,}
 
 if [[ -e /tmp/efi ]]; then
     rm -rf /tmp/efi

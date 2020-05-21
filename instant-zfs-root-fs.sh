@@ -686,7 +686,7 @@ EOF_GRUB
             mkdir -p $altroot/boot/efi/EFI/${distri,,}
         fi
 
-        rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
+        rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
 
         echo
         echo Install Grub to $drive
@@ -774,7 +774,7 @@ EOF_CONF
         mount /dev/${efi} /tmp/efi
         mkdir -p /tmp/efi/EFI/${distri,,}
 
-        rsync -a --copy-links --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
+        rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
