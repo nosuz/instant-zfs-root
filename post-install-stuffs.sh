@@ -43,6 +43,12 @@ systemctl start update-efi
 cp $SCRIPT_DIR/trim-zfs-pools.sh /boot
 crontab -l | (cat ; echo "@monthly /boot/trim-zfs-pools.sh";) | crontab -
 
+# install backup script
+mkdir -p /root/bin
+cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
+cp $SCRIPT_DIR/backup/backup-zfs.sh /root/bin/
+
+# take initial snapshot
 if [[ -n zfs_pool ]]; then
     zfs snapshot -r $zfs_pool@init
 fi

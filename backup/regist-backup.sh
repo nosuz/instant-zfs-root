@@ -27,13 +27,6 @@ else
     exit
 fi
 
-if [[ ! -e /root/bin/backup-zfs.sh ]]; then
-    if [[ ! -d /root/bin ]]; then
-        mkdir -p /root/bin
-    fi
-    cp $SCRIPT_DIR/backup-zfs.sh /root/bin/
-fi
-
 # install service
 cat > /etc/systemd/system/backup-zfs2${zfs_pool}.service << EOF_SYSD
 [Unit]
