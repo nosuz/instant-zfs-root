@@ -17,10 +17,24 @@ function log() {
     return 0
 }
 
+# https://stackoverflow.com/questions/28195805/running-notify-send-as-root
+function notify-send() {
+    #Detect the name of the display in use
+    local display=":$(ls /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
+
+    #Detect the user using such display
+    local user=$(who | grep '('$display')' | awk '{print $1}' | head -n 1)
+
+    #Detect the id of the user
+    local uid=$(id -u $user)
+
+    sudo -u $user DISPLAY=$display DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus notify-send "$@"
+}
 # get lock
 [[ $FLOCKER != $0 ]] && exec env FLOCKER=$0 flock --exclusive --nonblock "$0" "$0" "$@"
 
 log "Backup start at $(date +'%F %R') $$"
+notify-send "Backup started" "backup to $backup_pool"
 
 zpool export $backup_pool
 retries=0
@@ -100,4 +114,5 @@ if (( $? != 0 )); then
     log "ERROR: failed to send-recv @bak_$now"
 fi
 
+notify-send "Backup finished" "$backup_pool was exported"
 log "Backup finished at $(date +'%F %R')"
