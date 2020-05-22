@@ -12,6 +12,7 @@ script_name=$(basename $0)
 
 function log() {
     echo "$@"
+    echo "$@" | nc -NU /tmp/backup 2> /dev/null
     # [[ $no_tty -eq 1 ]] && logger --tag $script_name "$@"
 
     return 0
@@ -33,6 +34,7 @@ function notify-send() {
 # get lock
 [[ $FLOCKER != $0 ]] && exec env FLOCKER=$0 flock --exclusive --nonblock "$0" "$0" "$@"
 
+log "Watch progress by nc -Ukl /tmp/backup"
 log "Backup start at $(date +'%F %R') $$"
 notify-send "Backup started" "backup to $backup_pool"
 
@@ -115,4 +117,5 @@ if (( $? != 0 )); then
 fi
 
 notify-send "Backup finished" "$backup_pool was exported"
+wall "$backup_pool was exported"
 log "Backup finished at $(date +'%F %R')"
