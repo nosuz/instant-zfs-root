@@ -17,7 +17,7 @@ kernel=$(ls -v vmlinuz-* | tail -n 1)
 initrd="initrd.img-${kernel#vmlinuz-}"
 
 new=$(stat -c %Y $kernel)
-boot=$(stat -c %Y efi/EFI/${distri,,}/vmlinuz)
+boot=$(stat -c %Y efi/EFI/${distri,,}/vmlinuz || echo 0)
 diff=$(( $new - $boot ))
 
 if (( $diff > 1 )); then
@@ -26,7 +26,7 @@ if (( $diff > 1 )); then
 fi
 
 new=$(stat -c %Y $initrd)
-boot=$(stat -c %Y efi/EFI/${distri,,}/initrd.img)
+boot=$(stat -c %Y efi/EFI/${distri,,}/initrd.img || echo 0)
 diff=$(( $new - $boot ))
 
 if (( $diff > 1 )); then
