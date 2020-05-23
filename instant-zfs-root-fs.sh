@@ -550,7 +550,7 @@ for drive in ${drives[@]}; do
     mkdosfs -F 32 -s 1 -n EFI /dev/${efi}
     #mkfs.vfat -F 32 -s 1 -n EFI /dev/${efi}
 
-    gdisk -l /dev/$drive
+    sgdisk -p /dev/$drive
 done
 
 [[ -e $altroot ]] && rm -rf $altroot
