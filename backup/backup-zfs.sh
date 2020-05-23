@@ -116,6 +116,10 @@ if (( $? != 0 )); then
     log "ERROR: failed to send-recv @bak_$now"
 fi
 
+# reset trap
+trap EXIT
+exec_finish
+
 notify-send "Backup finished" "$backup_pool was exported"
 wall "$backup_pool was exported"
 log "Backup finished at $(date +'%F %R')"
