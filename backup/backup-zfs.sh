@@ -100,8 +100,8 @@ if (( $? != 0 )); then
     exit
 fi
 
-last_snap=$(zfs list -H -t snap|cut -f 1 | grep -e "^${main_pool}@bak_" -e "^${backup_pool}/${main_pool}@bak_"|sed -e "s/.*@//"| sort |uniq -d|tail -n 1)
-if [[ $last_snap = "" ]]; then
+last_snap=$(zfs list -H -t snap $main_pool $backup_pool | cut -f 1 | sed -e 's/.*@//' | sort -V | uniq -d | tail -n 1)
+if [[ -z $last_snap ]]; then
     # full backup
     log "send full: ${main_pool}@bak_$now"
     send_opt=''
