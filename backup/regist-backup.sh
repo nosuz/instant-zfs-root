@@ -49,20 +49,28 @@ udevadm control --reload
 
 systemctl list-unit-files --type=service | grep backup-zfs
 
-zpool export $zfs_pool
-retries=0
-while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
-    if (( $retries > 3 )); then
-        echo Too many retries.
-	echo "Failed to export $zfs_pool"
-        exit
-    fi
-    let retries++
-
-    echo retry to export $zfs_pool
-    sleep 2
+echo -n "Do you want to start backup now? [YES/no] "
+read answer
+if [[ $answer =~ ^[Nn][Oo]$ ]]; then
     zpool export $zfs_pool
-done
+    retries=0
+    while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
+        if (( $retries > 3 )); then
+            echo Too many retries.
+	    echo "Failed to export $zfs_pool"
+            exit
+        fi
+        let retries++
 
-echo Exported $zfs_pool
-echo Remove backup pool and reconnet it to start backup process.
+        echo retry to export $zfs_pool
+        sleep 2
+        zpool export $zfs_pool
+    done
+
+    echo Exported $zfs_pool
+    echo Remove backup pool and reconnet it to start backup process.
+else
+    echo "You can watch backup process by watch-backup.sh or nc -Ukl /tmp/backup"
+    echo "Backup starts anytime the drive that have backup pool are connected."
+    systemctl --no-block start backup-zfs2${zfs_pool}.service
+fi
