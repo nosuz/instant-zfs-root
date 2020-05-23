@@ -40,7 +40,7 @@ notify-send "Backup started" "backup to $backup_pool"
 
 zpool export $backup_pool
 retries=0
-while (( $(zpool list | grep -c "^$backup_pool ") != 0 )); do
+while (( $(zpool list -H| grep -c "^${backup_pool}\s") != 0 )); do
     if (( $retries > 3 )); then
         log Too many retries.
         exit
@@ -55,7 +55,7 @@ done
 zpool import -N $backup_pool
 # wait to import
 retries=0
-while (( $(zpool list | grep -c "^$backup_pool ") == 0 )); do
+while (( $(zpool list -H | grep -c "^${backup_pool}\s") == 0 )); do
     if (( $retries > 3 )); then
         log Too many retries.
         exit
@@ -71,7 +71,7 @@ function exec_finish() {
     log export $backup_pool
     zpool export $backup_pool
     retries=0
-    while (( $(zpool list | grep -c "^$backup_pool ") != 0 )); do
+    while (( $(zpool list -H | grep -c "^${backup_pool}\s") != 0 )); do
         if (( $retries > 3 )); then
             log Too many retries.
 	    log "Failed to export $backup_pool"

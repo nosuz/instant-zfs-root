@@ -16,7 +16,7 @@ Usage:
 EOF_HELP
 }
 
-if (( $(zpool list | grep -c "^$1 ") == 1 )); then
+if (( $(zpool list -H | grep -c "^${1}\s") == 1 )); then
     zfs_pool=$1
     zfs_path=$(zpool status -LP $zfs_pool | awk 'match($1, /^\/dev\//){print $1}'|tail -n 1)
 
@@ -51,7 +51,7 @@ systemctl list-unit-files --type=service | grep backup-zfs
 
 zpool export $zfs_pool
 retries=0
-while (( $(zpool list | grep -c "^$zfs_pool ") != 0 )); do
+while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
     if (( $retries > 3 )); then
         echo Too many retries.
 	echo "Failed to export $zfs_pool"

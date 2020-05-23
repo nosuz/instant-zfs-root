@@ -814,7 +814,7 @@ done
 # convert name from sdX to drive ID
 zpool export $zfs_pool
 retries=0
-while (( $(zpool list | grep -c "^$zfs_pool ") != 0 )); do
+while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
     if (( $retries > 3 )); then
         echo Too many retries.
         exit
@@ -830,7 +830,7 @@ zpool status
 
 zpool export $zfs_pool
 retries=0
-while (( $(zpool list | grep -c "^$zfs_pool ") != 0 )); do
+while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
     if (( $retries > 3 )); then
         echo Too many retries.
         exit
