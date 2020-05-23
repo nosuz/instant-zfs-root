@@ -110,8 +110,8 @@ else
     log "send diff: @$last_snap => ${backup_pool}@bak_$now"
     send_opt=" -I @$last_snap"
 fi
-log "zfs send $send_opt ${main_pool}@bak_$now|zfs recv -vuF ${backup_pool}/${main_pool}"
-zfs send -R $send_opt ${main_pool}@bak_$now|zfs recv -vuF ${backup_pool}/${main_pool}
+log "zfs send -w $send_opt ${main_pool}@bak_$now|zfs recv -vuF ${backup_pool}/${main_pool}"
+zfs send -Rw $send_opt ${main_pool}@bak_$now|zfs recv -vuF ${backup_pool}/${main_pool}
 if (( $? != 0 )); then
     log "ERROR: failed to send-recv @bak_$now"
 fi
