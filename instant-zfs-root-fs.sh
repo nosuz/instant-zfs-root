@@ -751,7 +751,16 @@ if [[ $bootmng != "grub" ]]; then
         unzip refind-bin-${refind_ver}.zip > /dev/null
     fi
 
-    cat > /tmp/refind.conf <<EOF_CONF
+    # https://www.rodsbooks.com/refind/installing.html#linux
+    mv refind-bin-${refind_ver}/refind .
+    # optional
+    # remove useless binary and drivers
+    ls -d refind/* | grep -vE '_x64|icons' | xargs rm -rf
+
+    # set refind_x64 as default boot loader
+    mv refind/refind_x64.efi refind/bootx64.efi
+
+    cat > refind/refind.conf <<EOF_CONF
 timeout $bootmng_timeout
 icons_dir EFI/boot/icons/
 scanfor manual
@@ -765,7 +774,7 @@ menuentry "$distri ZFS" {
     options "ro root=ZFS=$zfs_pool/$subvol/root $boot_opts"
 }
 EOF_CONF
-    cat /tmp/refind.conf
+    cat refind/refind.conf
 
     if [[ ! -e /tmp/efi ]]; then
         mkdir /tmp/efi
@@ -788,20 +797,11 @@ EOF_CONF
 
         rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
 
+        # install rEFInd
+        cp -pr refind/. /tmp/efi/EFI/boot
+
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-        # https://www.rodsbooks.com/refind/installing.html#linux
-        cp -pr refind-bin-${refind_ver}/refind/. /tmp/efi/EFI/boot
-
-        # optional
-        # remove useless binary and drivers
-        ls -d /tmp/efi/EFI/boot/* | grep -vE '_x64|icons' | xargs rm -rf
-
-        # copyt rEFInd config file
-        cp -p /tmp/refind.conf /tmp/efi/EFI/boot/
-        # set refind_x64 as default boot loader
-        mv /tmp/efi/EFI/boot/refind_x64.efi /tmp/efi/EFI/boot/bootx64.efi
-
         if [[ $bootmng == "refind" ]]; then
             efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/boot/bootx64.efi' -L "rEFInd $serial"
         else
