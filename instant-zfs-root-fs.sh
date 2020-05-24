@@ -780,14 +780,18 @@ EOF_CONF
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
         if [[ $bootmng == "refind" ]]; then
             # https://www.rodsbooks.com/refind/installing.html#linux
-            cp -pr refind-bin-${refind_ver}/refind /tmp/efi/EFI/
+            cp -pr refind-bin-${refind_ver}/refind/. /tmp/efi/EFI/boot
+
             # optional
             # remove useless binary and drivers
-            ls -d /tmp/efi/EFI/refind/* | grep -vE '_x64|icons' | xargs rm -rf
+            ls -d /tmp/efi/EFI/boot/* | grep -vE '_x64|icons' | xargs rm -rf
 
-            cp -p /tmp/refind.conf /tmp/efi/EFI/refind/
+            # copyt rEFInd config file
+            cp -p /tmp/refind.conf /tmp/efi/EFI/boot/
+            # set refind_x64 as default boot loader
+            mv /tmp/efi/EFI/boot/refind_x64.efi /tmp/efi/EFI/boot/bootx64.efi
 
-            efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/refind/refind_x64.efi' -L "rEFInd $serial"
+            efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/boot/bootx64.efi' -L "rEFInd $serial"
 
         else
             efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img $boot_opts"
