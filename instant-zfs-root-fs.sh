@@ -52,12 +52,21 @@ Usage:
 
 Options:
 -b (grub|refind)
-    Install boot load manager. If this option was not set, the kernel will be directly loaded by EFI stub.
+    Install boot manager. If this option was not set, the kernel will
+    be directly loaded by EFI stub.
+
+    If no boot manager was selected, the system boot kernel directory
+    by EFI boot stub. And rEFInd is installed to keep bootable when
+    NVRAM is cleared or moved to another machine.
 
 -e keyfile_path
     Encrypt all file systems.
+
     If set / as key file, the file systems are encrypted by passphrase.
-    If a keyfile_path is specified, it is used as encryption key file. Be care all contents are destroy and created a new patition table if keyfile_path was whole disk.
+
+    If a keyfile_path is specified, it is used as encryption key
+    file. Be care all contents are destroy and created a new patition
+    table if keyfile_path was whole disk.
 
 -f
     Stop to edit /etc/fstab file.
@@ -87,10 +96,15 @@ Options:
 ZFS properties
 --autotrim
     Enable auto trim.
-    On the zpool manual, enableing auto trim property puts significant stress on the strage devices. So, they recommend to run periodical zpool trim command for lower end devices.
+
+    On the zpool manual, enableing auto trim property puts significant
+    stress on the strage devices. So, they recommend to run periodical
+    zpool trim command for lower end devices.
 
 --copies=(2|3)
-    Set copies property on zpool. THis option might be rescue from some checksum errors. But this completeley DOES NOT protect from drive errors. Use a mirrored or RAID vdev for redundancy.
+    Set copies property on zpool. THis option might be rescue from
+    some checksum errors. But this completeley DOES NOT protect from
+    drive errors. Use a mirrored or RAID vdev for redundancy.
 
 --snapdir
     Set snapdir visible.
