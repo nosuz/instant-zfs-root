@@ -99,7 +99,7 @@ if (( $? != 0 )); then
     exit
 fi
 
-last_snap=$(zfs list -H -t snap $main_pool $backup_pool | cut -f 1 | sed -e 's/.*@//' | sort -V | uniq -d | tail -n 1)
+last_snap=$(zfs list -H -t snap $main_pool $backup_pool/$main_pool | cut -f 1 | sed -e 's/.*@//' | sort -V | uniq -d | tail -n 1)
 if [[ -z $last_snap ]]; then
     # full backup
     log "send full: ${main_pool}@bak_$now"
@@ -107,10 +107,10 @@ if [[ -z $last_snap ]]; then
 else
     # diff backup
     log "send diff: @$last_snap => ${backup_pool}@bak_$now"
-    send_opt=" -I @$last_snap"
+    send_opt="-I @$last_snap"
 fi
-log "zfs send -w $send_opt ${main_pool}@bak_$now|zfs recv -vuF ${backup_pool}/${main_pool}"
-zfs send -Rw $send_opt ${main_pool}@bak_$now|zfs recv -vuF ${backup_pool}/${main_pool}
+log "zfs send -Rw $send_opt ${main_pool}@bak_$now | zfs recv -vuF ${backup_pool}/${main_pool}"
+zfs send -Rw $send_opt ${main_pool}@bak_$now | zfs recv -vuF $backup_pool/$main_pool
 if (( $? != 0 )); then
     log "ERROR: failed to send-recv @bak_$now"
 fi
