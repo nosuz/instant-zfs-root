@@ -11,9 +11,8 @@ now=$(date +%Y%m%d_%H%M)
 script_name=$(basename $0)
 
 function log() {
-    echo "$@"
-    echo "$@" | nc -NU /tmp/backup 2> /dev/null
-    # [[ $no_tty -eq 1 ]] && logger --tag $script_name "$@"
+    echo "$@" | tee >(nc -NU /tmp/backup 2> /dev/null)
+    # logger --tag $script_name "$@"
 
     return 0
 }
