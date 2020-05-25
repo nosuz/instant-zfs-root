@@ -59,11 +59,11 @@ EOF
 systemctl enable update-efi
 systemctl start update-efi
 
-cp $SCRIPT_DIR/trim-zfs-pools.sh /boot
-crontab -l | (cat ; echo "@monthly /boot/trim-zfs-pools.sh";) | crontab -
+mkdir -p /root/bin
+cp $SCRIPT_DIR/trim-zfs-pools.sh /root/bin
+crontab -l | (cat ; echo "@monthly /root/bin/trim-zfs-pools.sh";) | crontab -
 
 # install backup script
-mkdir -p /root/bin
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
 cp $SCRIPT_DIR/backup/backup-zfs.sh /root/bin/
 
