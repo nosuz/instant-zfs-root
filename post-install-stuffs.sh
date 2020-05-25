@@ -5,17 +5,36 @@
 
 export PATH=$PATH:/usr/sbin:/sbin
 
+# https://stackoverflow.com/questions/28195805/running-notify-send-as-root
+function notify-send() {
+    # return if not graphical
+    if (( $(ls /tmp/.X11-unix/ | wc -l) == 0 )); then
+        return
+    fi
+
+    #Detect the name of the display in use
+    local display=":$(ls /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
+
+    #Detect the user using such display
+    local user=$(who | grep '('$display')' | awk '{print $1}' | head -n 1)
+
+    #Detect the id of the user
+    local uid=$(id -u $user)
+
+    sudo -u $user DISPLAY=$display DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus notify-send "$@"
+}
+
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
+
+# redirect STDOUT and STDERR to logfile
+exec &>> $SCRIPT_DIR/post-install.log
+echo Start post install jobs.
 
 zfs_pool=""
 if (( $# > 0 )); then
     zfs_pool=$1
 fi
-
-# cancel autorun on reboot
-#crontab -l | sed -e "/^@reboot $SCRIPT_DIR\//s/^/#/"| awk '!a[$0]++' | crontab -
-crontab -l | perl -pe "s{^(\@reboot $SCRIPT_DIR/)}{#\1}" | awk '!a[$0]++' | crontab -
 
 swapoff -a
 
@@ -48,7 +67,15 @@ mkdir -p /root/bin
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
 cp $SCRIPT_DIR/backup/backup-zfs.sh /root/bin/
 
+# cancel autorun on reboot
+systemctl disable post-install-stuffs
+rm /etc/systemd/system/post-install-stuffs.service
+
 # take initial snapshot
 if [[ -n zfs_pool ]]; then
     zfs snapshot -r $zfs_pool@init
 fi
+zfs list -t snap
+
+notify-send "Post install jobs" "Finished."
+echo Finished post install jobs.

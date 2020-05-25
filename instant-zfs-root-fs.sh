@@ -605,9 +605,26 @@ zpool status
 zfs list
 
 echo
-echo Make post installation script entry in crontab.
+echo Make post installation script entry in systemd.
+# https://www.golinuxcloud.com/run-script-at-startup-boot-without-cron-linux/
 # run post install script at the next boot.
-crontab -l | (cat ; echo "@reboot $SCRIPT_DIR/post-install-stuffs.sh $zfs_pool";) | crontab -
+cat << EOF > /etc/systemd/system/post-install-stuffs.service
+[Unit]
+# Execute command after reboot
+Description=Do post reboot job for ZFS root.
+After=default.target
+
+[Service]
+Type=simple
+RemainAfterExit=no
+ExecStart=$SCRIPT_DIR/post-install-stuffs.sh $zfs_pool
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl enable post-install-stuffs
 
 # copy system files
 echo ""
@@ -615,8 +632,8 @@ echo "Copying / to $altroot. This takes for a few minutes."
 rsync --info=progress2 -ax --exclude=/home --exclude=$altroot --exclude=/tmp --exclude=/swapfile --exclude=/swap.img / $altroot
 
 # cancel autorun on reboot
-#crontab -l | sed -e "/^@reboot $SCRIPT_DIR\// s/^/#/"| awk '!a[$0]++' | crontab -
-crontab -l | perl -pe "s{^(\@reboot $SCRIPT_DIR/)}{#\1}" | awk '!a[$0]++' | crontab -
+systemctl disable post-install-stuffs
+rm /etc/systemd/system/post-install-stuffs.service
 
 echo "Copying /home to $altroot/home."
 rsync --info=progress2 -a /home/ $altroot/home
