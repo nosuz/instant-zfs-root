@@ -618,13 +618,15 @@ if (( $single_fs != 1 )); then
 fi
 
 if [[ -n $zfs_swap ]]; then
-    # https://wiki.archlinux.jp/index.php/ZFS#.E3.82.B9.E3.83.AF.E3.83.83.E3.83.97.E3.83.9C.E3.83.AA.E3.83.A5.E3.83.BC.E3.83.A0
+    # https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-use-a-zvol-as-a-swap-device
     zfs create \
         -V ${zfs_swap}G \
         -b $(getconf PAGESIZE) \
         -o logbias=throughput \
+        -o compression=off \
         -o sync=always \
         -o primarycache=metadata \
+        -o secondarycache=none \
         -o com.sun:auto-snapshot=false \
         $zfs_pool/${distri^^}/swap
 fi
