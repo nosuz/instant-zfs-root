@@ -240,7 +240,7 @@ done
 # shift options/arguments list
 shift $(($OPTIND - 1))
 
-if (( zfs_compress == 1 )); then
+if (( $zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
 fi
 
