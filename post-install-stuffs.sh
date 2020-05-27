@@ -30,15 +30,24 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 exec &>> $SCRIPT_DIR/post-install.log
 echo Start post install jobs.
 
+distri=$(lsb_release -i | awk '{print $3}')
+
 zfs_pool=""
 if (( $# > 0 )); then
     zfs_pool=$1
+    zfs_swap=$2
 else
     echo No required options.
     exit
 fi
 
-swapoff -a
+if [[ -z zfs_swap ]]; then
+    swapoff -a
+else
+    mkswap -f /dev/zvol/$zfs_pool/${distri^^}/swap
+    echo  "/dev/zvol/$zfs_pool/${distri^^}/swap none swap sw 0 0" >> /etc/fstab
+    swapon -a
+fi
 
 cp $SCRIPT_DIR/update-efi.sh /boot
 
@@ -75,7 +84,10 @@ rm /etc/systemd/system/post-install-stuffs.service
 
 # take initial snapshot
 zfs snapshot -r $zfs_pool@init
-zfs list -t snap
+if [[ -n $zfs_swap ]]; then
+    zfs destroy $zfs_pool/${distri^^}/swap@init
+fi
+zfs list -t all
 
 notify-send "Post install jobs" "Finished."
 echo Finished post install jobs.

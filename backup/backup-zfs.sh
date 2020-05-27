@@ -9,6 +9,7 @@ backup_pool=$1
 
 now=$(date +%Y%m%d_%H%M)
 script_name=$(basename $0)
+distri=$(lsb_release -i | awk '{print $3}')
 
 function log() {
     echo "$@" | tee >(nc -NU /tmp/backup 2> /dev/null)
@@ -100,6 +101,12 @@ if (( $? != 0 )); then
 fi
 
 for fs in $(zfs list -r -H $main_pool | awk '{print $1}'); do
+    if [[ $fs =~ /swap$ ]]; then
+       zfs destroy $fs@bak_$now
+       log "skip: $fs"
+       continue
+    fi
+
     last_snap=$(zfs list -H -t snap $fs $backup_pool/$fs | awk '{if ($1 ~ "@bak_") sub(".*@", "", $1); print $1}' | sort | uniq -d | tail -n 1)
     if [[ -z $last_snap ]]; then
         # full backup

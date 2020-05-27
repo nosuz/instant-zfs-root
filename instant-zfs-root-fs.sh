@@ -44,6 +44,10 @@ zfs_compress=1
 zfs_encrypt=0
 zpool_opts=()
 
+# default swap size
+ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
+zfs_swap=$(echo "sqrt($ram_size+1)"|bc)
+
 # define usage
 usage(){
     cat <<EOF_HELP
@@ -108,6 +112,10 @@ ZFS properties
 
 --snapdir
     Set snapdir visible.
+
+--swap=SWAP_SIZE
+    Set swap zvol size by gibibyte. If set 0, no swap volume.
+    Default size is sqrt(RAM_SZIE + 1).
 
 EOF_HELP
 }
@@ -213,6 +221,16 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
             ;;
         --snapdir)
             zpool_opts+=("-O snapdir=visible")
+            ;;
+        --swap)
+            if (( $optarg == 0 )); then
+                zfs_swap=""
+            elif [[ $optarg =~ ^[0-9]+$ ]]; then
+                zfs_swap=$optarg
+            else
+                echo swap size must be ineger in gibibyte.
+                exit
+            fi
             ;;
     esac
 done
@@ -599,6 +617,18 @@ if (( $single_fs != 1 )); then
         $zfs_pool/${distri^^}/home
 fi
 
+if [[ -n $zfs_swap ]]; then
+    # https://wiki.archlinux.jp/index.php/ZFS#.E3.82.B9.E3.83.AF.E3.83.83.E3.83.97.E3.83.9C.E3.83.AA.E3.83.A5.E3.83.BC.E3.83.A0
+    zfs create \
+        -V ${zfs_swap}G \
+        -b $(getconf PAGESIZE) \
+        -o logbias=throughput \
+        -o sync=always \
+        -o primarycache=metadata \
+        -o com.sun:auto-snapshot=false \
+        $zfs_pool/${distri^^}/swap
+fi
+
 zpool status
 zfs list
 
@@ -615,7 +645,7 @@ After=default.target
 [Service]
 Type=simple
 RemainAfterExit=no
-ExecStart=$SCRIPT_DIR/post-install-stuffs.sh $zfs_pool
+ExecStart=$SCRIPT_DIR/post-install-stuffs.sh $zfs_pool $zfs_swap
 TimeoutStartSec=0
 
 [Install]
