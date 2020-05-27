@@ -8,15 +8,14 @@ export PATH=$PATH:/usr/sbin:/sbin
 # https://stackoverflow.com/questions/28195805/running-notify-send-as-root
 function notify-send() {
     # return if not graphical
-    if (( $(ls /tmp/.X11-unix/ | wc -l) == 0 )); then
-        return
-    fi
+    (( $(ls /tmp/.X11-unix/ | wc -l) == 0 )) && return
 
     #Detect the name of the display in use
     local display=":$(ls /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
 
     #Detect the user using such display
     local user=$(who | grep '('$display')' | awk '{print $1}' | head -n 1)
+    [[ -z $user ]] && return
 
     #Detect the id of the user
     local uid=$(id -u $user)
