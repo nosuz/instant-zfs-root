@@ -33,6 +33,9 @@ echo Start post install jobs.
 zfs_pool=""
 if (( $# > 0 )); then
     zfs_pool=$1
+else
+    echo No required options.
+    exit
 fi
 
 swapoff -a
@@ -71,9 +74,7 @@ systemctl disable post-install-stuffs
 rm /etc/systemd/system/post-install-stuffs.service
 
 # take initial snapshot
-if [[ -n zfs_pool ]]; then
-    zfs snapshot -r $zfs_pool@init
-fi
+zfs snapshot -r $zfs_pool@init
 zfs list -t snap
 
 notify-send "Post install jobs" "Finished."
