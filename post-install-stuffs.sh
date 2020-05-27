@@ -35,18 +35,9 @@ distri=$(lsb_release -i | awk '{print $3}')
 zfs_pool=""
 if (( $# > 0 )); then
     zfs_pool=$1
-    zfs_swap=$2
 else
     echo No required options.
     exit
-fi
-
-if [[ -z zfs_swap ]]; then
-    swapoff -a
-else
-    mkswap -f /dev/zvol/$zfs_pool/${distri^^}/swap
-    echo  "/dev/zvol/$zfs_pool/${distri^^}/swap none swap sw 0 0" >> /etc/fstab
-    swapon -a
 fi
 
 cp $SCRIPT_DIR/update-efi.sh /boot
@@ -84,7 +75,7 @@ rm /etc/systemd/system/post-install-stuffs.service
 
 # take initial snapshot
 zfs snapshot -r $zfs_pool@init
-if [[ -n $zfs_swap ]]; then
+if (( $(zfs list -H $zfs_pool/${distri^^}/swap 2> /dev/null | wc -l) != 0)); then
     zfs destroy $zfs_pool/${distri^^}/swap@init
 fi
 zfs list -t all

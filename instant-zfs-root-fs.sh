@@ -647,7 +647,7 @@ After=default.target
 [Service]
 Type=simple
 RemainAfterExit=no
-ExecStart=$SCRIPT_DIR/post-install-stuffs.sh $zfs_pool $zfs_swap
+ExecStart=$SCRIPT_DIR/post-install-stuffs.sh $zfs_pool
 TimeoutStartSec=0
 
 [Install]
@@ -673,6 +673,11 @@ echo Edit /etc/fstab
 # comment out all
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
 echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
+
+if [[ -n $zfs_swap ]]; then
+    mkswap -f /dev/zvol/$zfs_pool/${distri^^}/swap
+    echo  "/dev/zvol/$zfs_pool/${distri^^}/swap none swap sw 0 0" >> $altroot/etc/fstab
+fi
 
 if (( $edit_fstab == 1 )); then
     # edit /etc/fstab
