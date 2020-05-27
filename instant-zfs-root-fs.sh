@@ -477,7 +477,7 @@ if (( $zfs_encrypt == 1 )); then
         # check encryption key file is disk or partition
         echo
         echo Prepare encryption key file.
-        type=$(lsblk -d -o TYPE $encrypt_key | tail -n 1)
+        type=$(lsblk -dno TYPE $(readlink -f $encrypt_key))
         case $type in
             disk)
                 key_file=/dev/disk/by-partlabel/zfs_key
