@@ -247,7 +247,6 @@ kernel_ver=$(uname -r)
 
 case "$distri" in
     "Ubuntu")
-        subvol="UBUNTU"
         case "$release" in
             19.04)
                 :
@@ -265,7 +264,6 @@ case "$distri" in
         esac
         ;;
     "LinuxMint")
-        subvol="MINT"
         case "$release" in
             19.3)
                 :
@@ -588,17 +586,17 @@ echo Create zfs
 zfs create \
     -o canmount=off \
     -o mountpoint=none \
-    $encrypt_opts $zfs_pool/$subvol
+    $encrypt_opts $zfs_pool/${distri^^}
 
 # make subvolume for /(root)
 zfs create \
     -o mountpoint=/ \
-    $zfs_pool/$subvol/root
+    $zfs_pool/${distri^^}/root
 if (( $single_fs != 1 )); then
     # make subvolume for /home and copy on it.
     zfs create \
         -o mountpoint=/home \
-        $zfs_pool/$subvol/home
+        $zfs_pool/${distri^^}/home
 fi
 
 zpool status
@@ -788,7 +786,7 @@ menuentry "$distri ZFS" {
     ostype Linux
     loader /EFI/${distri,,}/vmlinuz
     initrd /EFI/${distri,,}/initrd.img
-    options "ro root=ZFS=$zfs_pool/$subvol/root $boot_opts"
+    options "ro root=ZFS=$zfs_pool/${distri^^}/root $boot_opts"
 }
 EOF_CONF
     cat refind/refind.conf
@@ -822,7 +820,7 @@ EOF_CONF
         if [[ $bootmng == "refind" ]]; then
             efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/boot/bootx64.efi' -L "rEFInd $serial"
         else
-            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/$subvol/root initrd=/EFI/${distri,,}/initrd.img $boot_opts"
+            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img $boot_opts"
         fi
         umount /tmp/efi
     done
