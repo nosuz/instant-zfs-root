@@ -37,7 +37,7 @@ encrypt_opts=""
 encrypt_key=""
 bootmng=""
 bootmng_timeout=5
-boot_opts="quiet splash"
+boot_opts=(quiet splash)
 grub_pkg=""
 vdev=""
 zfs_compress=1
@@ -46,7 +46,8 @@ zpool_opts=()
 
 # default swap size
 ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
-zfs_swap=$(echo "sqrt($ram_size+1)"|bc)
+swap_size=$(echo "sqrt($ram_size+1)"|bc)
+hibernate=0
 
 # define usage
 usage(){
@@ -109,6 +110,10 @@ ZFS properties
     Set copies property on zpool. THis option might be rescue from
     some checksum errors. But this completeley DOES NOT protect from
     drive errors. Use a mirrored or RAID vdev for redundancy.
+
+--hibernate
+    Enable hybernation. Makes a default swap + physical RAM size
+    partition for swap.
 
 --snapdir
     Set snapdir visible.
@@ -186,7 +191,7 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
             zfs_compress=0
             ;;
         -v)
-            boot_opts=""
+            boot_opts=()
             ;;
         -z)
             case ${optarg,,} in
@@ -216,6 +221,9 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
                 exit
             fi
             ;;
+        --hibernate)
+            hibernate=1
+            ;;
         --autotrim)
             zpool_opts+=("-o autotrim=on")
             ;;
@@ -224,9 +232,9 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
             ;;
         --swap)
             if (( $optarg == 0 )); then
-                zfs_swap=""
+                swap_size=""
             elif [[ $optarg =~ ^[0-9]+$ ]]; then
-                zfs_swap=$optarg
+                swap_size=$optarg
             else
                 echo swap size must be ineger in gibibyte.
                 exit
@@ -242,6 +250,19 @@ shift $(($OPTIND - 1))
 
 if (( $zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
+fi
+
+ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
+if (( $hibernate == 1 )); then
+    if [[ -z $bootmng ]]; then
+        echo Boot Manager Grub or rEFInd are required to hibernation.
+        exit
+    fi
+
+    if [[ -z $swap_size ]];then
+        swap_size=$(echo "sqrt($ram_size+1)"|bc)
+    fi
+    swap_size=$(($swap_size + $ram_size))
 fi
 
 # parse additional arguments
@@ -547,16 +568,21 @@ echo Setup GPT
 zpool destroy $zfs_pool
 
 # setup GPT on target drive
+swap_part=""
+swap_uuid=""
 for drive in ${drives[@]}; do
     case "$drive" in
         sd*)
             efi="${drive}1"
+            swap_part="${drive}3"
             ;;
         nvme*)
             efi="${drive}p1"
+            swap_part="${drive}p3"
             ;;
         *)
             efi="${drive}1"
+            swap_part="${drive}3"
             ;;
     esac
 
@@ -567,10 +593,30 @@ for drive in ${drives[@]}; do
            --change-name=1:EFI \
            /dev/$drive
 
-    sgdisk -n 2:0:0 \
-           -t 2:8300 \
-           -c 2:ZFS \
-           /dev/$drive # Linux Filesystem
+    if (( $hibernate == 1 )); then
+        sgdisk -n 2:0:-${swap_size}G \
+               -t 2:8300 \
+               -c 2:ZFS \
+               /dev/$drive # Linux Filesystem
+
+        sgdisk -n 3:0:0 \
+               -t 3:8200 \
+               -c 3:SWAP \
+               /dev/$drive # Linux Filesystem
+
+        mkswap -f /dev/$swap_part
+        swap_uuid=$(lsblk -no UUID /dev/$swap_part)
+        while [[ -z $swap_uuid ]]; do
+            echo Wait UUID for Swap part.
+            sleep 2
+            swap_uuid=$(lsblk -no UUID /dev/$swap_part)
+        done
+    else
+        sgdisk -n 2:0:0 \
+               -t 2:8300 \
+               -c 2:ZFS \
+               /dev/$drive # Linux Filesystem
+    fi
     # All same size drives have same number of sectors?
     # I am not sure. ZFS dones not accept smaller dirves for replace.
     # create 1G smaller partition
@@ -582,6 +628,9 @@ for drive in ${drives[@]}; do
 
     sgdisk -p /dev/$drive
 done
+if (( $hibernate == 1 )); then
+    echo Swap UUID: $swap_uuid
+fi
 
 [[ -e $altroot ]] && rm -rf $altroot
 mkdir $altroot
@@ -617,10 +666,10 @@ if (( $single_fs != 1 )); then
         $zfs_pool/${distri^^}/home
 fi
 
-if [[ -n $zfs_swap ]]; then
+if [[ -n $swap_size ]]; then
     # https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-use-a-zvol-as-a-swap-device
     zfs create \
-        -V ${zfs_swap}G \
+        -V ${swap_size}G \
         -b $(getconf PAGESIZE) \
         -o logbias=throughput \
         -o compression=off \
@@ -674,9 +723,14 @@ echo Edit /etc/fstab
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
 echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
 
-if [[ -n $zfs_swap ]]; then
+if (( $hibernate == 1 )); then
+    echo "UUID=$swap_uuid none swap sw 0 0" >> $altroot/etc/fstab
+
+    echo "RESUME=UUID=$swap_uuid" > $altroot/etc/initramfs-tools/conf.d/resume
+    boot_opts+=("resume=UUID=$swap_uuid")
+elif [[ -n $swap_size ]]; then
     mkswap -f /dev/zvol/$zfs_pool/${distri^^}/swap
-    echo  "/dev/zvol/$zfs_pool/${distri^^}/swap none swap sw 0 0" >> $altroot/etc/fstab
+    echo "/dev/zvol/$zfs_pool/${distri^^}/swap none swap sw 0 0" >> $altroot/etc/fstab
 fi
 
 if (( $edit_fstab == 1 )); then
@@ -720,7 +774,7 @@ GRUB_DEFAULT=0
 GRUB_TIMEOUT=$bootmng_timeout
 GRUB_RECORDFAIL_TIMEOUT=$bootmng_timeout
 GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
-GRUB_CMDLINE_LINUX_DEFAULT="$boot_opts"
+GRUB_CMDLINE_LINUX_DEFAULT="${boot_opts[@]}"
 GRUB_CMDLINE_LINUX=""
 GRUB_TERMINAL=console
 EOF_GRUB
@@ -823,7 +877,7 @@ menuentry "$distri ZFS" {
     ostype Linux
     loader /EFI/${distri,,}/vmlinuz
     initrd /EFI/${distri,,}/initrd.img
-    options "ro root=ZFS=$zfs_pool/${distri^^}/root $boot_opts"
+    options "ro root=ZFS=$zfs_pool/${distri^^}/root ${boot_opts[@]}"
 }
 EOF_CONF
     cat refind/refind.conf
@@ -857,7 +911,7 @@ EOF_CONF
         if [[ $bootmng == "refind" ]]; then
             efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/boot/bootx64.efi' -L "rEFInd $serial"
         else
-            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img $boot_opts"
+            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img ${boot_opts[@]}"
         fi
         umount /tmp/efi
     done
