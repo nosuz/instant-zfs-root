@@ -99,21 +99,27 @@ if (( $? != 0 )); then
     exit
 fi
 
-last_snap=$(zfs list -H -t snap $main_pool $backup_pool/$main_pool | cut -f 1 | sed -e 's/.*@//' | sort -V | uniq -d | tail -n 1)
-if [[ -z $last_snap ]]; then
-    # full backup
-    log "send full: ${main_pool}@bak_$now"
-    send_opt=''
-else
-    # diff backup
-    log "send diff: @$last_snap => ${backup_pool}@bak_$now"
-    send_opt="-I @$last_snap"
-fi
-log "zfs send -Rw $send_opt ${main_pool}@bak_$now | zfs recv -vuF ${backup_pool}/${main_pool}"
-zfs send -Rw $send_opt ${main_pool}@bak_$now | zfs recv -vuF $backup_pool/$main_pool
-if (( $? != 0 )); then
-    log "ERROR: failed to send-recv @bak_$now"
-fi
+for fs in $(zfs list -r -H $main_pool | awk '{print $1}'); do
+    last_snap=$(zfs list -H -t snap $fs $backup_pool/$fs | awk '{if ($1 ~ "@bak_") sub(".*@", "", $1); print $1}' | sort | uniq -d | tail -n 1)
+    if [[ -z $last_snap ]]; then
+        # full backup
+        log "send full: $fs@bak_$now"
+        send_opt=''
+    else
+        # diff backup
+        log "send diff: @$last_snap => $fs@bak_$now"
+        send_opt="-I @$last_snap"
+    fi
+    #log "zfs send -w $send_opt $fs@bak_$now | zfs recv -vuF ${backup_pool}/$fs"
+    zfs send -w $send_opt $fs@bak_$now | zfs recv -vuF $backup_pool/$fs
+    if (( $? != 0 )); then
+        log "Retry to send full dataset."
+        zfs send -w $fs@bak_$now | zfs recv -vuF $backup_pool/$fs
+        if (( $? != 0 )); then
+            log "ERROR: failed to send-recv $fs@bak_$now"
+        fi
+    fi
+done
 
 # reset trap
 trap EXIT
