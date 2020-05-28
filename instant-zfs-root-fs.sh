@@ -45,7 +45,7 @@ zfs_encrypt=0
 zpool_opts=()
 
 # default swap size
-ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
+ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2 + 1}')
 swap_size=$(echo "sqrt($ram_size+1)"|bc)
 hibernate=0
 
@@ -252,7 +252,6 @@ if (( $zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
 fi
 
-ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
 if (( $hibernate == 1 )); then
     if [[ -z $bootmng ]]; then
         echo Boot Manager Grub or rEFInd are required to hibernation.
