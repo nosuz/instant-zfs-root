@@ -45,7 +45,7 @@ zfs_encrypt=0
 zpool_opts=()
 
 # default swap size
-ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
+ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2 + 1}')
 swap_size=$(echo "sqrt($ram_size+1)"|bc)
 hibernate=0
 
