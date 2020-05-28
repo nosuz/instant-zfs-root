@@ -565,12 +565,13 @@ udevadm control --reload
 echo
 echo Setup GPT
 # detroy existing ZFS pool
-zpool destroy $zfs_pool
+zpool destroy -f $zfs_pool
 
 # setup GPT on target drive
 swap_part=""
 swap_uuid=""
 for drive in ${drives[@]}; do
+    zpool labelclear -f /dev/$drive
     case "$drive" in
         sd*)
             efi="${drive}1"
