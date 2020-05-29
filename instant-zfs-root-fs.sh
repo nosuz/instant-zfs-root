@@ -826,6 +826,10 @@ EOF_GRUB
         # Grub-install make only one boot entry.
         # Install endividual boot entry.
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+        for entry in $(efibootmgr |awk "(\$3 == \"$serial\" || \$4 == \"$serial\") {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+            echo Remove old EFI boot entry Boot$entry
+            efibootmgr -b $entry -B
+        done
         echo Make boot entry for $drive $serial
         efibootmgr -c -d /dev/$drive -p 1 \
                    -l '/EFI/ubuntu/shimx64.efi' \
@@ -909,6 +913,11 @@ EOF_CONF
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+        for entry in $(efibootmgr |awk "(\$3 == \"$serial\" || \$4 == \"$serial\") {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+            echo Remove old EFI boot entry Boot$entry
+            efibootmgr -b $entry -B
+        done
+        echo Make boot entry for $drive $serial
         if [[ $bootmng == "refind" ]]; then
             efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/boot/bootx64.efi' -L "rEFInd $serial"
         else
