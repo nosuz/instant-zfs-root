@@ -36,7 +36,7 @@ do_reboot=0
 encrypt_opts=""
 encrypt_key=""
 bootmng=""
-bootmng_timeout=5
+bootmng_timeout=3
 boot_opts=(quiet splash)
 grub_pkg=""
 vdev=""
@@ -769,17 +769,10 @@ if [[ $bootmng == "grub" ]]; then
     if [[ -e $altroot/etc/default/grub ]]; then
         mv $altroot/etc/default/grub $altroot/etc/default/grub.orig
     fi
-    cat > $altroot/etc/default/grub <<EOF_GRUB
-GRUB_DEFAULT=0
-#GRUB_TIMEOUT_STYLE=hidden
-GRUB_TIMEOUT=$bootmng_timeout
-GRUB_RECORDFAIL_TIMEOUT=$bootmng_timeout
-GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
-GRUB_CMDLINE_LINUX_DEFAULT="${boot_opts[@]}"
-GRUB_CMDLINE_LINUX=""
-GRUB_TERMINAL=console
-EOF_GRUB
-    cat $altroot/etc/default/grub
+    sed -i.bak \
+        -e "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"${boot_opts[@]}\"/" \
+        -e "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$bootmng_timeout/" \
+        $altroot/etc/default/grub
 
     if [[ ! -d $altroot/tmp ]]; then
         mkdir $altroot/tmp
