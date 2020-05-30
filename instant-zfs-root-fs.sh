@@ -262,12 +262,6 @@ fi
 if (( $zfs_encrypt == 1)); then
     hibernate=0
 elif (( $hibernate == 1 )); then
-    ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
-    if [[ -z $bootmng ]]; then
-        echo Boot Manager Grub or rEFInd are required to hibernation.
-        exit
-    fi
-
     if [[ -z $swap_size ]];then
         swap_size=$(echo "sqrt($ram_size+1)"|bc)
     fi
@@ -772,15 +766,13 @@ ln -sf vmlinuz-$kernel_ver vmlinuz
 ln -sf initrd.img-$kernel_ver initrd.img
 popd > /dev/null
 
+boot_args=${boot_opts[@]}
 if [[ $bootmng == "grub" ]]; then
     echo
     echo Install GRUB
-    if [[ -e $altroot/etc/default/grub ]]; then
-        mv $altroot/etc/default/grub $altroot/etc/default/grub.orig
-    fi
-    sed -i.bak \
-        -e "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"${boot_opts[@]}\"/" \
+    sed -i.orig \
         -e "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$bootmng_timeout/" \
+        -e "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$boot_args\"|" \
         $altroot/etc/default/grub
 
     if [[ ! -d $altroot/tmp ]]; then
@@ -885,7 +877,7 @@ menuentry "$distri ZFS" {
     ostype Linux
     loader /EFI/${distri,,}/vmlinuz
     initrd /EFI/${distri,,}/initrd.img
-    options "ro root=ZFS=$zfs_pool/${distri^^}/root ${boot_opts[@]}"
+    options "ro root=ZFS=$zfs_pool/${distri^^}/root $boot_args"
 }
 EOF_CONF
     cat refind/refind.conf
@@ -929,7 +921,7 @@ EOF_CONF
             efibootmgr -c -d /dev/$drive -p 1 \
                        -L "$distri ZFS $serial" \
                        -l "/EFI/${distri,,}/vmlinuz" \
-                       -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img ${boot_opts[@]}"
+                       -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img $boot_args"
         fi
         umount /tmp/efi
     done
