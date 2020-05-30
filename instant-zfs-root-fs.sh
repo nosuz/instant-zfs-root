@@ -541,7 +541,7 @@ fi
 if [[ $bootmng == "grub" ]]; then
     grub_pkg="grub-efi-amd64-signed shim-signed"
 fi
-apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr $grub_pkg
+apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr gawk $grub_pkg
 if (( $? != 0 )); then
     echo Failed to install required packages.
     exit
@@ -820,7 +820,7 @@ if [[ $bootmng == "grub" ]]; then
         # Grub-install make only one boot entry.
         # Install endividual boot entry.
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-        for entry in $(efibootmgr |awk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+        for entry in $(efibootmgr |gawk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
         done
@@ -908,7 +908,7 @@ EOF_CONF
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-        for entry in $(efibootmgr |awk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+        for entry in $(efibootmgr |gawk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
         done
