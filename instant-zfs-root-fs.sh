@@ -73,6 +73,10 @@ Options:
     file. Be care all contents are destroy and created a new patition
     table if keyfile_path was whole disk.
 
+    If encryption is enabled, hibernation is disabled for security
+    reason. If the swap partition is not encrypted, encryoted data may
+    leak through swap partion data.
+
 -f
     Stop to edit /etc/fstab file.
 
@@ -114,6 +118,9 @@ ZFS properties
 --hibernate
     Enable hybernation. Makes a default swap + physical RAM size
     partition for swap.
+
+    This option is ignored if the encryption option is enabled,
+    because the plain swap patition is not safe.
 
 --snapdir
     Set snapdir visible.
@@ -252,7 +259,9 @@ if (( $zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
 fi
 
-if (( $hibernate == 1 )); then
+if (( $zfs_encrypt == 1)); then
+    hibernate=0
+elif (( $hibernate == 1 )); then
     if [[ -z $bootmng ]]; then
         echo Boot Manager Grub or rEFInd are required to hibernation.
         exit
@@ -815,14 +824,15 @@ if [[ $bootmng == "grub" ]]; then
         # Grub-install make only one boot entry.
         # Install endividual boot entry.
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-        for entry in $(efibootmgr |awk "(\$3 == \"$serial\" || \$4 == \"$serial\") {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+        for entry in $(efibootmgr |awk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
         done
         echo Make boot entry for $drive $serial
         efibootmgr -c -d /dev/$drive -p 1 \
-                   -l '/EFI/ubuntu/shimx64.efi' \
-                   -L "$distri ZFS $serial"
+                   -L "$distri ZFS $serial" \
+                   -l '/EFI/ubuntu/shimx64.efi'
+
     done
 fi
 
@@ -902,15 +912,20 @@ EOF_CONF
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-        for entry in $(efibootmgr |awk "(\$3 == \"$serial\" || \$4 == \"$serial\") {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+        for entry in $(efibootmgr |awk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
         done
         echo Make boot entry for $drive $serial
         if [[ $bootmng == "refind" ]]; then
-            efibootmgr -c -d /dev/$drive -p 1 -l '/EFI/boot/bootx64.efi' -L "rEFInd $serial"
+            efibootmgr -c -d /dev/$drive -p 1 \
+                       -L "$distri ZFS $serial" \
+                       -l '/EFI/boot/bootx64.efi'
         else
-            efibootmgr -c -d /dev/$drive -p 1 -l "/EFI/${distri,,}/vmlinuz" -L "$distri ZFS $serial" -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img ${boot_opts[@]}"
+            efibootmgr -c -d /dev/$drive -p 1 \
+                       -L "$distri ZFS $serial" \
+                       -l "/EFI/${distri,,}/vmlinuz" \
+                       -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img ${boot_opts[@]}"
         fi
         umount /tmp/efi
     done
