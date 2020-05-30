@@ -30,6 +30,9 @@ fi
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
+pushd .
+cd $SCRIPT_DIR
+
 single_fs=0
 edit_fstab=0
 do_reboot=0
@@ -984,3 +987,5 @@ else
         reboot
     fi
 fi
+
+popd
