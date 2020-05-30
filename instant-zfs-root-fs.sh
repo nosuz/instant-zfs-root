@@ -73,6 +73,10 @@ Options:
     file. Be care all contents are destroy and created a new patition
     table if keyfile_path was whole disk.
 
+    If encryption is enabled, hibernation is disabled for security
+    reason. If the swap partition is not encrypted, encryoted data may
+    leak through swap partion data.
+
 -f
     Stop to edit /etc/fstab file.
 
@@ -114,6 +118,9 @@ ZFS properties
 --hibernate
     Enable hybernation. Makes a default swap + physical RAM size
     partition for swap.
+
+    This option is ignored if the encryption option is enabled,
+    because the plain swap patition is not safe.
 
 --snapdir
     Set snapdir visible.
@@ -252,8 +259,10 @@ if (( $zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
 fi
 
-ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
-if (( $hibernate == 1 )); then
+if (( $zfs_encrypt == 1)); then
+    hibernate=0
+elif (( $hibernate == 1 )); then
+    ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2}')
     if [[ -z $bootmng ]]; then
         echo Boot Manager Grub or rEFInd are required to hibernation.
         exit
