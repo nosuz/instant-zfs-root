@@ -52,7 +52,7 @@ while (( $(zpool list -H| grep -c "^${backup_pool}\s") != 0 )); do
     zpool export $backup_pool
 done
 
-zpool import -N $backup_pool
+zpool import -d /dev/disk/zfs -N $backup_pool
 # wait to import
 retries=0
 while (( $(zpool list -H | grep -c "^${backup_pool}\s") == 0 )); do
