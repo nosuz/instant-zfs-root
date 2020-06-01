@@ -107,7 +107,7 @@ for fs in $(zfs list -r -H $main_pool | awk '{print $1}'); do
        continue
     fi
 
-    last_snap=$(zfs list -H -t snap $fs $backup_pool/$fs | awk '{if ($1 ~ "@bak_") sub(".*@", "", $1); print $1}' | sort | uniq -d | tail -n 1)
+    last_snap=$(zfs list -H -t snap $fs $backup_pool/$fs 2> /dev/null | awk '{if ($1 ~ "@bak_") sub(".*@", "", $1); print $1}' | sort | uniq -d | tail -n 1)
     if [[ -z $last_snap ]]; then
         # full backup
         log "send full: $fs@bak_$now"
