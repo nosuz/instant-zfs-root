@@ -7,7 +7,7 @@
 #https://wiki.archlinux.jp/index.php/GNU_Parted#UEFI.2FGPT_.E3.81.AE.E4.BE.8B
 
 # ZFS default pool name
-zfs_pool='tank'
+zfs_pool=$(hostname | tr [:upper:] [:lower:])
 altroot='/tmp/root'
 
 # http://sourceforge.net/projects/refind/files/
