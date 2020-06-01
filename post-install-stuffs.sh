@@ -67,7 +67,7 @@ crontab -l | (cat ; echo "@monthly /root/bin/trim-zfs-pools.sh";) | crontab -
 
 # install backup script
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
-cp $SCRIPT_DIR/backup/watch-zfs.sh /root/bin/
+cp $SCRIPT_DIR/backup/watch-backup.sh /root/bin/
 cp $SCRIPT_DIR/backup/backup-zfs.sh /root/bin/
 
 # cancel autorun on reboot
