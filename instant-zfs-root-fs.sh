@@ -609,7 +609,7 @@ for drive in ${drives[@]}; do
         sgdisk -n 3:0:0 \
                -t 3:8200 \
                -c 3:SWAP \
-               /dev/$drive # Linux Filesystem
+               /dev/$drive # Swap and Hibernate Partition
 
         mkswap -f /dev/$swap_part
         swap_uuid=$(lsblk -no UUID /dev/$swap_part)
