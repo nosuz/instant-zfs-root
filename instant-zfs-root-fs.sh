@@ -673,7 +673,7 @@ if (( $single_fs != 1 )); then
         $zfs_pool/${distri^^}/home
 fi
 
-if [[ -n $swap_size ]]; then
+if [[ -n $swap_size ]] && (( $hibernate != 1 )); then
     # https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-use-a-zvol-as-a-swap-device
     zfs create \
         -V ${swap_size}G \
