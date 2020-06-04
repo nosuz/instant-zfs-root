@@ -673,6 +673,7 @@ if (( $single_fs != 1 )); then
         $zfs_pool/${distri^^}/home
 fi
 
+touch backup-skip.list
 if [[ -n $swap_size ]] && (( $hibernate != 1 )); then
     # https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-use-a-zvol-as-a-swap-device
     zfs create \
@@ -685,6 +686,9 @@ if [[ -n $swap_size ]] && (( $hibernate != 1 )); then
         -o secondarycache=none \
         -o com.sun:auto-snapshot=false \
         $zfs_pool/${distri^^}/swap
+
+    # set as skip dataset
+    echo $zfs_pool/${distri^^}/swap >> backup-skip.list
 fi
 
 zpool status

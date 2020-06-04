@@ -7,6 +7,9 @@
 main_pool=$(zfs list|awk 'match($5,"^/$") {sub(/\/.*/, "",$1); print $1}')
 backup_pool=$1
 
+# https://qiita.com/koara-local/items/2d67c0964188bba39e29
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
+
 now=$(date +%Y%m%d_%H%M)
 script_name=$(basename $0)
 distri=$(lsb_release -i | awk '{print $3}')
@@ -100,13 +103,9 @@ if (( $? != 0 )); then
     exit
 fi
 
-for fs in $(zfs list -r -H $main_pool | awk '{print $1}'); do
-    if [[ $fs =~ /swap$ ]]; then
-       zfs destroy $fs@bak_$now
-       log "skip: $fs"
-       continue
-    fi
+targets=$(cat <(zfs list -r -H $main_pool) $SCRIPT_DIR/backup-skip.list 2> /dev/null | awk '{print $1}' | sort | uniq -u)
 
+for fs in $targets; do
     last_snap=$(zfs list -H -t snap $fs $backup_pool/$fs 2> /dev/null | awk '{if ($1 ~ "@bak_") sub(".*@", "", $1); print $1}' | sort | uniq -d | tail -n 1)
     if [[ -z $last_snap ]]; then
         # full backup
