@@ -40,7 +40,7 @@ else
     exit
 fi
 
-cp $SCRIPT_DIR/update-efi.sh /boot
+cp $SCRIPT_DIR/scripts/update-efi.sh /boot
 
 cat << EOF > /etc/systemd/system/update-efi.service
 [Unit]
@@ -62,9 +62,9 @@ systemctl enable update-efi
 systemctl start update-efi
 
 mkdir -p /root/bin
-cp $SCRIPT_DIR/trim-zfs-pools.sh /root/bin
+cp $SCRIPT_DIR/scripts/trim-zfs-pools.sh /root/bin
 crontab -l | (cat ; echo "@monthly /root/bin/trim-zfs-pools.sh";) | crontab -
-cp $SCRIPT_DIR/zfs-snapshot.sh /root/bin
+cp $SCRIPT_DIR/scripts/zfs-snapshot.sh /root/bin
 crontab -l | \
     (cat ; echo "@daily /root/bin/zfs-snapshot.sh -d";) | \
     (cat ; echo "@hourly /root/bin/zfs-snapshot.sh -h";) | \
