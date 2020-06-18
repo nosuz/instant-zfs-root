@@ -29,5 +29,4 @@ for pool in $(zpool list -H -o health,name | awk '{if ($1 == "ONLINE") print $2}
         zfs snapshot -r ${pool}@cron_${now}
         zfs destroy -r ${pool}@cron_${prev}
     fi
- done
-)
+done
