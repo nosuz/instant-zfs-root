@@ -870,9 +870,6 @@ if [[ $bootmng != "grub" ]]; then
     # remove useless binary and drivers
     ls -d refind/* | grep -vE '_x64|icons' | xargs rm -rf
 
-    # set refind_x64 as default boot loader
-    mv refind/refind_x64.efi refind/bootx64.efi
-
     cat > refind/refind.conf <<EOF_CONF
 timeout $bootmng_timeout
 icons_dir EFI/boot/icons/
@@ -923,7 +920,7 @@ EOF_CONF
         if [[ $bootmng == "refind" ]]; then
             efibootmgr -c -d /dev/$drive -p 1 \
                        -L "$distri ZFS $serial" \
-                       -l '/EFI/boot/bootx64.efi'
+                       -l '/EFI/boot/refind_x64.efi'
         else
             efibootmgr -c -d /dev/$drive -p 1 \
                        -L "$distri ZFS $serial" \
