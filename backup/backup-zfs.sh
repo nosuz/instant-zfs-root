@@ -106,6 +106,11 @@ fi
 targets=$(cat <(zfs list -r -H $main_pool) $SCRIPT_DIR/backup-skip.list 2> /dev/null | awk '{print $1}' | sort | uniq -u)
 
 for fs in $targets; do
+    zfs list $fs &> /dev/null
+    if (( $? != 0 )); then
+        continue
+    fi
+
     last_snap=$(zfs list -H -t snap $fs $backup_pool/$fs 2> /dev/null | awk '{if ($1 ~ "@bak_") sub(".*@", "", $1); print $1}' | sort | uniq -d | tail -n 1)
     if [[ -z $last_snap ]]; then
         # full backup
