@@ -74,7 +74,10 @@ crontab -l | \
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
 cp $SCRIPT_DIR/backup/watch-backup.sh /root/bin/
 cp $SCRIPT_DIR/backup/backup-zfs.sh /root/bin/
-cp $SCRIPT_DIR/backup-skip.list /root/bin/
+if [[ -e $SCRIPT_DIR/backup-skip.list ]]; then
+    cp $SCRIPT_DIR/backup-skip.list /root/bin/
+fi
+zfs list -H|awk '{if ($1 ~ /\/swap$/) { print $1}}' >> /root/bin/backup-skip.list
 
 # cancel autorun on reboot
 systemctl disable post-install-stuffs
