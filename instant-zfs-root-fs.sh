@@ -739,6 +739,12 @@ if (( $hibernate == 1 )); then
 
     echo "RESUME=UUID=$swap_uuid" > $altroot/etc/initramfs-tools/conf.d/resume
     boot_opts+=("resume=UUID=$swap_uuid")
+
+    # Hibernate by close laptop display.
+    sed -i.orig -e 's/^HibernateDelaySec=/\#HibernateDelaySec=/' $altroot/etc/systemd/sleep.conf
+    echo "HibernateDelaySec=90min" >> $altroot/etc/systemd/sleep.conf
+    sed -i.orig -e 's/^HandleLidSwitch=/\#HandleLidSwitch=/' $altroot/etc/systemd/logind.conf
+    echo "HandleLidSwitch=suspend-then-hibernate" >> $altroot/etc/systemd/logind.conf
 elif [[ -n $swap_size ]]; then
     mkswap -f /dev/zvol/$zfs_pool/${distri^^}/swap
     echo "/dev/zvol/$zfs_pool/${distri^^}/swap none swap sw 0 0" >> $altroot/etc/fstab
