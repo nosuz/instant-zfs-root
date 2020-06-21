@@ -774,13 +774,14 @@ ln -sf initrd.img-$kernel_ver initrd.img
 popd > /dev/null
 
 boot_args=${boot_opts[@]}
+sed -i.orig \
+    -e "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$bootmng_timeout/" \
+    -e "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$boot_args\"|" \
+    $altroot/etc/default/grub
+
 if [[ $bootmng == "grub" ]]; then
     echo
     echo Install GRUB
-    sed -i.orig \
-        -e "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$bootmng_timeout/" \
-        -e "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$boot_args\"|" \
-        $altroot/etc/default/grub
 
     if [[ ! -d $altroot/tmp ]]; then
         mkdir $altroot/tmp
