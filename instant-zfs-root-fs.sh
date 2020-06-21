@@ -826,7 +826,7 @@ if [[ $bootmng == "grub" ]]; then
 
     for drive in ${drives[@]}; do
         # Grub-install make only one boot entry.
-        # Install endividual boot entry.
+        # Install boot entrys for each drive.
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
         for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
