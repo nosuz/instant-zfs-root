@@ -828,13 +828,13 @@ if [[ $bootmng == "grub" ]]; then
         # Grub-install make only one boot entry.
         # Install endividual boot entry.
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-        for entry in $(efibootmgr |gawk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+        for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
         done
         echo Make boot entry for $drive $serial
         efibootmgr -c -d /dev/$drive -p 1 \
-                   -L "$distri ZFS $serial" \
+                   -L "GRUB_ZFS $serial" \
                    -l '/EFI/ubuntu/shimx64.efi'
 
     done
@@ -877,7 +877,7 @@ icons_dir EFI/boot/icons/
 scanfor manual
 scan_all_linux_kernels false
 
-menuentry "$distri ZFS" {
+menuentry "${distri}_ZFS" {
     graphics on
     ostype Linux
     loader /EFI/${distri,,}/vmlinuz
@@ -913,18 +913,18 @@ EOF_CONF
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
-        for entry in $(efibootmgr |gawk "\$4 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+        for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
         done
         echo Make boot entry for $drive $serial
         if [[ $bootmng == "refind" ]]; then
             efibootmgr -c -d /dev/$drive -p 1 \
-                       -L "$distri ZFS $serial" \
+                       -L "rEFInd_ZFS $serial" \
                        -l '/EFI/boot/refind_x64.efi'
         else
             efibootmgr -c -d /dev/$drive -p 1 \
-                       -L "$distri ZFS $serial" \
+                       -L "${distri}_ZFS $serial" \
                        -l "/EFI/${distri,,}/vmlinuz" \
                        -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img $boot_args"
         fi
