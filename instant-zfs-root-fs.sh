@@ -46,6 +46,7 @@ vdev=""
 zfs_compress=1
 zfs_encrypt=0
 zpool_opts=()
+has_serial=1
 
 # default swap size
 ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2 + 1}')
@@ -348,7 +349,7 @@ drives=()
 if (( ${#zfs_drives[@]} == 0 )); then
     while read drive; do
         drives+=(${drive##/dev/})
-    done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9] 2> /dev/null |grep -v $root_drive)
+    done < <(ls /dev/sd[a-z] /dev/nvme[0-9]n[0-9] /dev/vd[a-z] 2> /dev/null |grep -v $root_drive)
 else
     for drive in ${zfs_drives[@]}; do
         drives+=($drive)
@@ -375,7 +376,7 @@ EOF_DRIVE_HEADER
 targets=()
 for drive in ${drives[@]}; do
     case "$drive" in
-        sd*)
+        [sv]d*)
             cat <<EOF_DRIVE
 ${drive}
   ${drive}1 UEFI
@@ -560,7 +561,7 @@ if [[ ! -e /etc/udev/rules.d/91-zfs-vdev.rules ]] ; then
 # https://github.com/zfsonlinux/pkg-zfs/wiki/HOWTO-install-Ubuntu-14.04-or-Later-to-a-Native-ZFS-Root-Filesystem
 
 # Create a by-id style link in /dev for zfs_member vdev. Needed by boot
-KERNEL=="sd*[0-9]", ENV{ID_FS_TYPE}=="zfs_member", SYMLINK+="disk/zfs/\$env{ID_BUS}-\$env{ID_SERIAL}-part%n"
+KERNEL=="[sv]d*[0-9]", ENV{ID_FS_TYPE}=="zfs_member", SYMLINK+="disk/zfs/\$env{ID_BUS}-\$env{ID_SERIAL}-part%n"
 KERNEL=="nvme[0-9]n[0-9]p[0-9]", ENV{ID_FS_TYPE}=="zfs_member", SYMLINK+="disk/zfs/nvme-\$env{ID_SERIAL}-part%n"
 EOF_UDEV
 fi
@@ -579,7 +580,7 @@ swap_uuid=""
 for drive in ${drives[@]}; do
     zpool labelclear -f /dev/$drive
     case "$drive" in
-        sd*)
+        [sv]d*)
             efi="${drive}1"
             swap_part="${drive}3"
             ;;
@@ -796,7 +797,7 @@ if [[ $bootmng == "grub" ]]; then
 
     for drive in ${drives[@]}; do
         case "$drive" in
-            sd*)
+            [sv]d*)
                 efi="${drive}1"
                 ;;
             nvme*)
@@ -834,6 +835,11 @@ if [[ $bootmng == "grub" ]]; then
         # Grub-install make only one boot entry.
         # Install boot entrys for each drive.
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+        if [[ $serial = "_" ]]; then
+            has_serial=0
+            serial=$(udevadm info /dev/sda|awk '{if ($2 ~/^ID_PART_TABLE_UUID=/) {sub("ID_PART_TABLE_UUID=", "", $2); print $2}}')
+        fi
+
         for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
@@ -898,7 +904,7 @@ EOF_CONF
     fi
     for drive in ${drives[@]}; do
         case "$drive" in
-            sd*)
+            [sv]d*)
                 efi="${drive}1"
                 ;;
             nvme*)
@@ -919,6 +925,11 @@ EOF_CONF
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
+        if [[ $serial = "_" ]]; then
+            has_serial=0
+            serial=$(udevadm info /dev/sda|awk '{if ($2 ~/^ID_PART_TABLE_UUID=/) {sub("ID_PART_TABLE_UUID=", "", $2); print $2}}')
+        fi
+
         for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
             echo Remove old EFI boot entry Boot$entry
             efibootmgr -b $entry -B
@@ -938,38 +949,40 @@ EOF_CONF
     done
 fi
 
-# make symlinks for ZFS drives
-udevadm trigger
+if (( $has_serial == 1 )); then
+    # make symlinks for ZFS drives
+    udevadm trigger
 
-retries=0
-while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
-    if (( $retries > 3 )); then
-        echo Too many retries.
-        exit
-    fi
-    let retries++
+    retries=0
+    while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
+        if (( $retries > 3 )); then
+            echo Too many retries.
+            exit
+        fi
+        let retries++
 
-    echo waiting ZFS vol come up in /dev/disk/zfs
-    sleep 2 # wait to come up dist/zfs
-done
+        echo waiting ZFS vol come up in /dev/disk/zfs
+        sleep 2 # wait to come up dist/zfs
+    done
 
-# convert name from sdX to drive ID
-zpool export $zfs_pool
-retries=0
-while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
-    if (( $retries > 3 )); then
-        echo Too many retries.
-        exit
-    fi
-    let retries++
-
-    echo retry to export $zfs_pool
-    sleep 2
+    # convert name from sdX to drive ID
     zpool export $zfs_pool
-done
-zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
-zpool status
+    retries=0
+    while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
+        if (( $retries > 3 )); then
+            echo Too many retries.
+            exit
+        fi
+        let retries++
 
+        echo retry to export $zfs_pool
+        sleep 2
+        zpool export $zfs_pool
+    done
+    zpool import -R $altroot -d /dev/disk/zfs $zfs_pool
+fi
+
+zpool status
 zpool export $zfs_pool
 retries=0
 while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
