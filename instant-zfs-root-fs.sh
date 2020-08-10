@@ -13,9 +13,6 @@ altroot='/tmp/root'
 # http://sourceforge.net/projects/refind/files/
 refind_ver='0.12.0'
 
-# grant by ROOT is required
-(( $EUID != 0 )) && exec sudo "$0" "$@"
-
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
@@ -248,6 +245,9 @@ done
 
 # shift options/arguments list
 shift $(($OPTIND - 1))
+
+# grant by ROOT is required
+(( $EUID != 0 )) && exec sudo "$0" "$@"
 
 if (( $zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
