@@ -13,16 +13,6 @@ altroot='/tmp/root'
 # http://sourceforge.net/projects/refind/files/
 refind_ver='0.12.0'
 
-# check booted from EFI
-if [[ ! -d /sys/firmware/efi ]]; then
-    echo -n "Does this machine support EFI boot? [yes/NO] "
-    read answer
-    if [[ ! $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-        echo This script requires EFI boot.
-        exit
-    fi
-fi
-
 # grant by ROOT is required
 (( $EUID != 0 )) && exec sudo "$0" "$@"
 
@@ -284,6 +274,16 @@ while (( $# > 0 )); do
     fi
     shift
 done
+
+# check booted from EFI
+if [[ ! -d /sys/firmware/efi ]]; then
+    echo -n "Does this machine support EFI boot? [yes/NO] "
+    read answer
+    if [[ ! $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+        echo This script requires EFI boot.
+        exit
+    fi
+fi
 
 echo Check distribution
 # get Release info.
