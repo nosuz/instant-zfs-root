@@ -13,6 +13,13 @@ altroot='/tmp/root'
 # http://sourceforge.net/projects/refind/files/
 refind_ver='0.12.0'
 
+# check booted from EFI
+if [[ ! -d /sys/firmware/efi ]]; then
+    echo This script requires EFI boot.
+    echo Boot from EFI.
+    exit
+fi
+
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
@@ -274,16 +281,6 @@ while (( $# > 0 )); do
     fi
     shift
 done
-
-# check booted from EFI
-if [[ ! -d /sys/firmware/efi ]]; then
-    echo -n "Does this machine support EFI boot? [yes/NO] "
-    read answer
-    if [[ ! $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-        echo This script requires EFI boot.
-        exit
-    fi
-fi
 
 echo Check distribution
 # get Release info.
