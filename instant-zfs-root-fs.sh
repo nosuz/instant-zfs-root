@@ -13,19 +13,14 @@ altroot='/tmp/root'
 # http://sourceforge.net/projects/refind/files/
 refind_ver='0.12.0'
 
-# check booted from EFI
-if [[ ! -d /sys/firmware/efi ]]; then
-    echo This script requires EFI boot.
-    echo Boot from EFI.
-    exit
-fi
-
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 pushd .
 cd $SCRIPT_DIR
+
+INSTALL_EFI_ENTRY="install_efi_entry.sh"
 
 single_fs=0
 edit_fstab=0
@@ -41,6 +36,19 @@ zfs_compress=1
 zfs_encrypt=0
 zpool_opts=()
 has_serial=1
+
+# check booted from EFI
+if [[ -d /sys/firmware/efi ]]; then
+    efi_boot=1
+else
+    efi_boot=0
+    cat <<EOF_SH > $INSTALL_EFI_ENTRY
+#!/bin/sh
+
+apt install -y efibootmgr
+EOF_SH
+    chmod +x $INSTALL_EFI_ENTRY
+fi
 
 # default swap size
 ram_size=$(free --giga|awk '{if ($1 == "Mem:") print $2 + 1}')
@@ -837,15 +845,23 @@ if [[ $bootmng == "grub" ]]; then
             serial=$(udevadm info /dev/sda|awk '{if ($2 ~/^ID_PART_TABLE_UUID=/) {sub("ID_PART_TABLE_UUID=", "", $2); print $2}}')
         fi
 
-        for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
-            echo Remove old EFI boot entry Boot$entry
-            efibootmgr -b $entry -B
-        done
-        echo Make boot entry for $drive $serial
-        efibootmgr -c -d /dev/$drive -p 1 \
-                   -L "GRUB_ZFS $serial" \
-                   -l '/EFI/ubuntu/shimx64.efi'
-
+        if (( $efi_boot == 1 )); then
+            for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+                echo Remove old EFI boot entry Boot$entry
+                efibootmgr -b $entry -B
+            done
+            echo Make boot entry for $drive $serial
+            efibootmgr -c -d /dev/$drive -p 1 \
+                       -L "GRUB_ZFS $serial" \
+                       -l '/EFI/ubuntu/shimx64.efi'
+        else
+            cat <<EOF_SH >> $INSTALL_EFI_ENTRY
+echo Make boot entry for $serial
+efibootmgr -c -d /dev/$drive -p 1 \
+           -L "GRUB_ZFS $serial" \
+           -l '/EFI/ubuntu/shimx64.efi'
+EOF_SH
+        fi
     done
 fi
 
@@ -927,20 +943,37 @@ EOF_CONF
             serial=$(udevadm info /dev/sda|awk '{if ($2 ~/^ID_PART_TABLE_UUID=/) {sub("ID_PART_TABLE_UUID=", "", $2); print $2}}')
         fi
 
-        for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
-            echo Remove old EFI boot entry Boot$entry
-            efibootmgr -b $entry -B
-        done
-        echo Make boot entry for $drive $serial
-        if [[ $bootmng == "refind" ]]; then
-            efibootmgr -c -d /dev/$drive -p 1 \
-                       -L "rEFInd_ZFS $serial" \
-                       -l '/EFI/boot/refind_x64.efi'
+        if (( $efi_boot == 1 )); then
+            for entry in $(efibootmgr |gawk "\$3 == \"$serial\" {match(\$1, /Boot0*([0-9]+)/, m);print m[1];}"); do
+                echo Remove old EFI boot entry Boot$entry
+                efibootmgr -b $entry -B
+            done
+            echo Make boot entry for $drive $serial
+            if [[ $bootmng == "refind" ]]; then
+                efibootmgr -c -d /dev/$drive -p 1 \
+                           -L "rEFInd_ZFS $serial" \
+                           -l '/EFI/boot/refind_x64.efi'
+            else
+                efibootmgr -c -d /dev/$drive -p 1 \
+                           -L "${distri}_ZFS $serial" \
+                           -l "/EFI/${distri,,}/vmlinuz" \
+                           -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img $boot_args"
+            fi
         else
-            efibootmgr -c -d /dev/$drive -p 1 \
-                       -L "${distri}_ZFS $serial" \
-                       -l "/EFI/${distri,,}/vmlinuz" \
-                       -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img $boot_args"
+            if [[ $bootmng == "refind" ]]; then
+                cat <<EOF_SH >> $INSTALL_EFI_ENTRY
+efibootmgr -c -d /dev/$drive -p 1 \
+           -L "rEFInd_ZFS $serial" \
+           -l '/EFI/boot/refind_x64.efi'
+EOF_SH
+            else
+                cat <<EOF_SH >> $INSTALL_EFI_ENTRY
+efibootmgr -c -d /dev/$drive -p 1 \
+           -L "${distri}_ZFS $serial" \
+           -l "/EFI/${distri,,}/vmlinuz" \
+           -u "ro root=ZFS=$zfs_pool/${distri^^}/root initrd=/EFI/${distri,,}/initrd.img $boot_args"
+EOF_SH
+            fi
         fi
         umount /tmp/efi
     done
@@ -996,14 +1029,20 @@ done
 
 # show final message
 echo Finished.
-if (( $do_reboot == 1 )); then
+if (( $efi_boot == 0 )); then
+    echo 1. Boot from UEFI
+    echo 2. Edit drive name in $INSTALL_EFI_ENTRY
+    echo 3. Excec next command
+    echo sh $SCRIPT_DIR/$INSTALL_EFI_ENTRY
+    echo
+elif (( $do_reboot == 1 )); then
     reboot
-else
-    echo -n "Reboot now? [yes/NO] "
-    read answer
-    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-        reboot
-    fi
+fi
+
+echo -n "Reboot now? [yes/NO] "
+read answer
+if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+    reboot
 fi
 
 popd
