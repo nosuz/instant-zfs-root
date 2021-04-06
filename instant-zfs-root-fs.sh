@@ -262,7 +262,10 @@ done
 shift $(($OPTIND - 1))
 
 # grant by ROOT is required
-(( $EUID != 0 )) && exec sudo "$0" "$@"
+if (( $EUID != 0 )); then
+    popd
+    exec sudo "$0" "$@"
+fi
 
 if (( $zfs_compress == 1 )); then
     zpool_opts+=("-O compression=lz4")
