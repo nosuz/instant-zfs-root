@@ -11,7 +11,7 @@ zfs_pool=$(hostname | tr [:upper:] [:lower:])
 altroot='/tmp/root'
 
 # http://sourceforge.net/projects/refind/files/
-refind_ver='0.12.0'
+refind_ver='0.13.2'
 
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_NAME=$(basename $0)
