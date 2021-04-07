@@ -10,7 +10,7 @@ exec &>> /var/log/update-efi.log
 cd /boot
 
 distri=$(lsb_release -i | awk '{print $3}')
-echo ----------------
+echo --- update EFI ---
 date
 
 kernel=$(ls -v vmlinuz-* | tail -n 1)
@@ -36,6 +36,8 @@ fi
 
 rsync -av --copy-links --delete --delete-before --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' --modify-window=1 /boot/ /boot/efi/EFI/${distri,,}
 
+efi_id=$(ls /boot | grep EFIid)
+
 if [[ -e /tmp/efi ]]; then
     rm -rf /tmp/efi
 fi
@@ -53,8 +55,13 @@ for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
     # mount EFI partition
     mount UUID=$uuid /tmp/efi
 
-    # sync files in EFI patition.
-    rsync -av --delete --delete-before --modify-window=1 /boot/efi/ /tmp/efi
+    if [[ -e /tmp/efi/$efi_id ]]; then
+        # same EFI group
+        # sync files in EFI patition.
+        rsync -av --delete --delete-before --modify-window=1 /boot/efi/ /tmp/efi
+    else
+        echo This EFI partition belongs to another system.
+    fi
 
     umount /tmp/efi
 done

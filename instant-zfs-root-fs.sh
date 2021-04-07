@@ -8,6 +8,7 @@
 
 # ZFS default pool name
 zfs_pool=$(hostname | tr [:upper:] [:lower:])
+efi_id=$(date "+EFIid_${zfs_pool}_%Y%m%d%H%M%S")
 altroot='/tmp/root'
 
 # http://sourceforge.net/projects/refind/files/
@@ -749,7 +750,7 @@ echo
 echo Edit /etc/fstab
 # comment out all
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
-echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
+#echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
 
 if (( $hibernate == 1 )); then
     echo "UUID=$swap_uuid none swap sw 0 0" >> $altroot/etc/fstab
@@ -796,6 +797,9 @@ ln -sf vmlinuz-$kernel_ver vmlinuz
 ln -sf initrd.img-$kernel_ver initrd.img
 popd > /dev/null
 
+# make efi_id file
+touch $altroot/boot/$efi_id
+
 boot_args=${boot_opts[@]}
 sed -i.orig \
     -e "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$bootmng_timeout/" \
@@ -811,6 +815,9 @@ if [[ $bootmng == "grub" ]]; then
     fi
     mount -t tmpfs tmpfs $altroot/tmp
 
+    if [[ ! -d $altroot/boot/efi ]]; then
+        mkdir -p $altroot/boot/efi
+    fi
     for drive in ${drives[@]}; do
         case "$drive" in
             [sv]d*)
@@ -824,10 +831,9 @@ if [[ $bootmng == "grub" ]]; then
                 ;;
         esac
 
-        if [[ ! -d $altroot/boot/efi ]]; then
-            mkdir -p $altroot/boot/efi
-        fi
         mount /dev/${efi} $altroot/boot/efi
+        # make fingerprint file
+        touch $altroot/boot/efi/$efi_id
         if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
             mkdir -p $altroot/boot/efi/EFI/${distri,,}
         fi
@@ -940,6 +946,8 @@ EOF_CONF
         esac
 
         mount /dev/${efi} /tmp/efi
+        # make fingerprint file
+        touch /tmp/efi/$efi_id
         mkdir -p /tmp/efi/EFI/${distri,,}
 
         rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
