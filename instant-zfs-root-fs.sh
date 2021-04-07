@@ -138,6 +138,8 @@ ZFS properties
 EOF_HELP
 }
 
+# save original command options.
+COMMAND_ARGS=$@
 while getopts "b:e:fhp:Rst:uvz:-:" opt; do
     # https://chitoku.jp/programming/bash-getopts-long-options#--foobar-%E3%81%A8---foo-bar-%E3%81%AE%E4%B8%A1%E6%96%B9%E3%82%92%E5%87%A6%E7%90%86%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95
     optarg="$OPTARG"
@@ -264,7 +266,7 @@ shift $(($OPTIND - 1))
 # grant by ROOT is required
 if (( $EUID != 0 )); then
     popd
-    exec sudo "$0" "$@"
+    exec sudo "$0" $COMMAND_ARGS
 fi
 
 if (( $zfs_compress == 1 )); then
