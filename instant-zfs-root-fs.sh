@@ -11,9 +11,6 @@ zfs_pool=$(hostname | tr [:upper:] [:lower:])
 efi_id=$(date "+EFIid_${zfs_pool}_%Y%m%d%H%M%S")
 altroot='/tmp/root'
 
-# http://sourceforge.net/projects/refind/files/
-refind_ver='0.13.2'
-
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
@@ -893,25 +890,25 @@ if [[ $bootmng != "grub" ]]; then
     echo Install rEFInd.
     apt install -y zip
 
-    if [[ ! -d refind-bin-${refind_ver} ]]; then
-        if [[ ! -e refind-bin-${refind_ver}.zip ]] ; then
-            wget -q -O refind-bin-${refind_ver}.zip https://sourceforge.net/projects/refind/files/${refind_ver}/refind-bin-${refind_ver}.zip/download
+    if [[ ! -e refind ]]; then
+        [[ -e refind-latest.zip ]] && rm refind-latest.zip
+        wget -q -O refind-latest.zip https://sourceforge.net/projects/refind/files/latest/download
 
-            if [[ -s refind-bin-${refind_ver}.zip ]] ; then
-                echo Got refind-bin-${refind_ver}.zip
-            else
-                echo Failed to download refind-bin-${refind_ver}.zip
-                exit
-            fi
+        if [[ -s refind-latest.zip ]] ; then
+            echo Got refind-latest.zip
+        else
+            echo Failed to download lates refind zip archive
+            exit
         fi
-        unzip refind-bin-${refind_ver}.zip > /dev/null
-    fi
+        unzip -qq -d refind-bin refind-latest.zip
 
-    # https://www.rodsbooks.com/refind/installing.html#linux
-    mv refind-bin-${refind_ver}/refind .
-    # optional
-    # remove useless binary and drivers
-    ls -d refind/* | grep -vE '_x64|icons' | xargs rm -rf
+        # https://www.rodsbooks.com/refind/installing.html#linux
+        mv refind-bin/*/refind .
+        rm -rf refind-bin
+        # optional
+        # remove useless binary and drivers
+        ls -d refind/* | grep -vE '_x64|icons' | xargs rm -rf
+    fi
 
     cat > refind/refind.conf <<EOF_CONF
 timeout $bootmng_timeout
