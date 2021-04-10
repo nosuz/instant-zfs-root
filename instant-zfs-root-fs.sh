@@ -747,7 +747,9 @@ echo
 echo Edit /etc/fstab
 # comment out all
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
-#echo LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
+echo \# --- >> $altroot/etc/fstab
+echo \# Mount EFI partition by systemctl service at booting. >> $altroot/etc/fstab
+echo \# LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
 
 if (( $hibernate == 1 )); then
     echo "UUID=$swap_uuid none swap sw 0 0" >> $altroot/etc/fstab
