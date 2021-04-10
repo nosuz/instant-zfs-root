@@ -115,7 +115,7 @@ ZFS properties
     zpool trim command for lower end devices.
 
 --copies=(2|3)
-    Set copies property on zpool. THis option might be rescue from
+    Set copies property on zpool. This option might be rescue from
     some checksum errors. But this completeley DOES NOT protect from
     drive errors. Use a mirrored or RAID vdev for redundancy.
 
