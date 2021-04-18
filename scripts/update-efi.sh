@@ -16,27 +16,22 @@ date
 kernel=$(ls -v vmlinuz-* | tail -n 1)
 initrd="initrd.img-${kernel#vmlinuz-}"
 
-new=$(stat -c %Y $kernel)
-boot=$(stat -c %Y efi/EFI/${distri,,}/vmlinuz || echo 0)
-diff=$(( $new - $boot ))
-
-if (( $diff > 1 )); then
+cmp -s $kernel efi/EFI/${distri,,}/vmlinuz
+if (( $? )); then
     echo "update vmlinux to $kernel ($diff sec)"
     ln -sf $kernel vmlinuz
 fi
 
-new=$(stat -c %Y $initrd)
-boot=$(stat -c %Y efi/EFI/${distri,,}/initrd.img || echo 0)
-diff=$(( $new - $boot ))
-
-if (( $diff > 1 )); then
+cmp -s $initrd efi/EFI/${distri,,}/initrd.img
+if (( $? )); then
     echo "update initrd to $initrd ($diff sec)"
     ln -sf $initrd initrd.img
 fi
 
 # revert bootx64 to refind
 if [[ -e efi/EFI/boot/refind_x64.efi ]]; then
-    if ! cmp -s efi/EFI/boot/refind_x64.efi efi/EFI/boot/bootx64.efi ; then
+    cmp -s efi/EFI/boot/refind_x64.efi efi/EFI/boot/bootx64.efi
+    if (( $? )) ; then
         echo "bootx64.efi is missing or over writen. copy refindx64 over bootx64."
         cp efi/EFI/boot/refind_x64.efi efi/EFI/boot/bootx64.efi
     fi
