@@ -34,6 +34,14 @@ if (( $diff > 1 )); then
     ln -sf $initrd initrd.img
 fi
 
+# revert bootx64 to refind
+if [[ -e efi/EFI/boot/refind_x64.efi ]]; then
+    if ! cmp -s efi/EFI/boot/refind_x64.efi efi/EFI/boot/bootx64.efi ; then
+        echo "bootx64.efi is missing or over writen. copy refindx64 over bootx64."
+        cp efi/EFI/boot/refind_x64.efi efi/EFI/boot/bootx64.efi
+    fi
+fi
+
 rsync -av --copy-links --delete --delete-before --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' --modify-window=1 /boot/ /boot/efi/EFI/${distri,,}
 
 efi_id=$(ls /boot | grep EFIid)
