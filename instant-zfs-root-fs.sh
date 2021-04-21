@@ -1004,15 +1004,30 @@ if (( $has_serial == 1 )); then
     udevadm trigger
 
     retries=0
-    while [[ ! -e /dev/disk/zfs ]] || (( $(ls /dev/disk/zfs | wc -l) != ${#drives[@]} )); do
+    while [[ ! -e /dev/disk/zfs ]]; do
         if (( $retries > 3 )); then
             echo Too many retries.
             exit
         fi
         let retries++
 
-        echo waiting ZFS vol come up in /dev/disk/zfs
+        echo waiting /dev/disk/zfs
         sleep 2 # wait to come up dist/zfs
+    done
+
+    retries=0
+    for drive in ${drives[@]}; do
+        while (( $(ls -l /dev/disk/zfs | grep -c /$drive ) != 0 )); do
+            if (( $retries > 3 )); then
+                echo Too many retries.
+                exit
+            fi
+            let retries++
+
+            echo waiting ZFS vol on $drive in /dev/disk/zfs
+            sleep 2 # wait to come up dist/zfs
+        done
+        echo Found ZFS vol on $drive in /dev/disk/zfs
     done
 
     # convert name from sdX to drive ID
