@@ -318,13 +318,16 @@ case "$distri" in
                 ;;
         esac
         ;;
-    "LinuxMint")
+    "LinuxMint"|"Linuxmint")
         case "$release" in
             19.3)
                 :
                 ;;
+            20.1)
+                :
+                ;;
             *)
-                echo Linux mint $release is not supported by this script.
+                echo Linux Mint $release is not supported by this script.
                 exit
                 ;;
         esac
