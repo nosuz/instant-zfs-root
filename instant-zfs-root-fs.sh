@@ -1015,7 +1015,8 @@ if (( $has_serial == 1 )); then
 
     retries=0
     for drive in ${drives[@]}; do
-        while (( $(ls -l /dev/disk/zfs | grep -c /$drive ) != 0 )); do
+        # wait to come up dist/zfs
+        while (( $(ls -l /dev/disk/zfs | grep -c /$drive ) == 0 )); do
             if (( $retries > 3 )); then
                 echo Too many retries.
                 exit
@@ -1023,7 +1024,7 @@ if (( $has_serial == 1 )); then
             let retries++
 
             echo waiting ZFS vol on $drive in /dev/disk/zfs
-            sleep 2 # wait to come up dist/zfs
+            sleep 2
         done
         echo Found ZFS vol on $drive in /dev/disk/zfs
     done
