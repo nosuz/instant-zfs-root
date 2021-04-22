@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# enable regular expression in case statements.
+shopt -s extglob
+
 # https://github.com/zfsonlinux/zfs/wiki/Ubuntu-16.04-Root-on-ZFS
 # https://www.medo64.com/2019/04/installing-uefi-zfs-root-on-ubuntu-19-04/
 
@@ -299,19 +302,11 @@ distri=$(lsb_release -i | awk '{print $3}')
 release=$(lsb_release -r | awk '{print $2}')
 kernel_ver=$(uname -r)
 
+# use extglob
 case "$distri" in
     "Ubuntu")
         case "$release" in
-            19.04)
-                :
-                ;;
-            19.10)
-                :
-                ;;
-            20.04)
-                :
-                ;;
-            20.10)
+            @(19|20).@(04|10))
                 :
                 ;;
             21.04)
