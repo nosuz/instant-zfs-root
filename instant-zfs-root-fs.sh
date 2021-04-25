@@ -33,7 +33,7 @@ bootmng_timeout=3
 boot_opts=(quiet splash)
 grub_pkg=""
 vdev=""
-zfs_compress=1
+zfs_compress="lz4"
 zfs_encrypt=0
 zpool_opts=()
 has_serial=1
@@ -71,6 +71,14 @@ Options:
     by EFI boot stub. And rEFInd is installed to keep bootable when
     NVRAM is cleared or moved to another machine.
 
+-c (none|gzip|lz4|zstd)
+    Specify compression algorithm. Default is lz4.
+
+    Lz4 is faster than Zstd but compresstion ratio is lower than zstd.
+    Lz4 is good for desktop enviroments and zstd is goot for storage severs.
+
+    None will not compress dataset. Gzip is gzip-6.
+
 -e keyfile_path
     Encrypt all file systems.
 
@@ -99,9 +107,6 @@ Options:
 
 -t timeout_sec
     Specify timeout for boot managers.
-
--u
-    Disable compression by LZ4.
 
 -v
     Show messages while booting.
@@ -164,6 +169,26 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
                     ;;
             esac
             ;;
+        -c)
+            case $optarg in
+                none)
+                    zfs_compress="none"
+                    ;;
+                gzip)
+                    zfs_compress="gzip"
+                    ;;
+                lz4)
+                    zfs_compress="lz4"
+                    ;;
+                zstd)
+                    zfs_compress="zstd"
+                    ;;
+                *)
+                    echo set none, lz4, pr zstd.
+                    exit
+                    ;;
+            esac
+            ;;
         -e)
             zfs_encrypt=1
             case $optarg in
@@ -202,9 +227,6 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
                 echo Set integer for timeout.
                 exit
             fi
-            ;;
-        -u)
-            zfs_compress=0
             ;;
         -v)
             boot_opts=()
@@ -268,10 +290,6 @@ shift $(($OPTIND - 1))
 if (( $EUID != 0 )); then
     popd
     exec sudo "$0" $COMMAND_ARGS
-fi
-
-if (( $zfs_compress == 1 )); then
-    zpool_opts+=("-O compression=lz4")
 fi
 
 if (( $zfs_encrypt == 1)); then
@@ -580,6 +598,24 @@ fi
 
 # apply udev rules
 udevadm control --reload
+
+case $zfs_compress in
+    gzip)
+        zpool_opts+=("-O compression=gzip")
+        ;;
+    lz4)
+        zpool_opts+=("-O compression=lz4")
+        ;;
+    zstd)
+        if (( $(zpool upgrade -v | grep -c ^zstd_compress) > 0 )); then
+            zpool_opts+=("-O compression=zstd")
+        else
+            echo ** This system does not support zstd **
+            echo use lz4 or other algorithms.
+            exit
+        fi
+        ;;
+esac
 
 echo
 echo Setup GPT
