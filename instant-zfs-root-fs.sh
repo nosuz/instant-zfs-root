@@ -30,7 +30,8 @@ encrypt_opts=""
 encrypt_key=""
 bootmng=""
 bootmng_timeout=3
-boot_opts=(quiet splash)
+default_boot_opts=(quiet splash)
+boot_opts=()
 grub_pkg=""
 vdev=""
 zfs_compress="lz4"
@@ -95,6 +96,9 @@ Options:
 -f
     Stop to edit /etc/fstab file.
 
+-o kernel_option
+    Set a kernel option. Repeat this option if more than two options are required.
+
 -p pool_name
     specify pool name
 
@@ -109,7 +113,7 @@ Options:
     Specify timeout for boot managers.
 
 -v
-    Show messages while booting.
+    Show messages while booting, or remove default options, quiet and splash.
 
 -z (single|stripe|mirror|raidz|raidz1|raidz2)
     Specify vdev to create.
@@ -146,7 +150,7 @@ EOF_HELP
 
 # save original command options.
 COMMAND_ARGS=$@
-while getopts "b:e:fhp:Rst:uvz:-:" opt; do
+while getopts "b:e:fho:p:Rst:uvz:-:" opt; do
     # https://chitoku.jp/programming/bash-getopts-long-options#--foobar-%E3%81%A8---foo-bar-%E3%81%AE%E4%B8%A1%E6%96%B9%E3%82%92%E5%87%A6%E7%90%86%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95
     optarg="$OPTARG"
     [[ "$opt" = - ]] &&
@@ -211,6 +215,9 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
             usage
             exit
             ;;
+        -o)
+            boot_opts+=($optarg)
+            ;;
         -p)
             zfs_pool=$optarg
             ;;
@@ -229,7 +236,7 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
             fi
             ;;
         -v)
-            boot_opts=()
+            default_boot_opts=()
             ;;
         -z)
             case ${optarg,,} in
@@ -280,6 +287,9 @@ while getopts "b:e:fhp:Rst:uvz:-:" opt; do
             ;;
     esac
 done
+
+# join two array
+boot_opts=("${default_boot_opts[@]} ${boot_opts[@]}")
 
 # https://blog.sleeplessbeastie.eu/2019/08/19/how-to-specify-the-same-option-multiple-times-using-bash/
 
