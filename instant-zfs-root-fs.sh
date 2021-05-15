@@ -100,14 +100,14 @@ Options:
     Set a kernel option. Repeat this option if more than two options are required.
 
 -p pool_name
-    specify pool name
+    Specify pool name. Default pool name is your host name, ${zfs_pool}.
 
 -R
     Reboot automatically when prepared ZFS root filesystem.
 
 -s
-    Single ZFS filesystem. /(root) and /home are placed
-    on the same filesystem.
+    Set single ZFS filesystem. /(root) and /home are placed
+    on the same filesystem. Root and home are separated datasets each other at default.
 
 -t timeout_sec
     Specify timeout for boot managers.
