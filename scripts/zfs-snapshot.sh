@@ -27,6 +27,8 @@ for pool in $(zpool list -H -o health,name | awk '{if ($1 == "ONLINE") print $2}
         zfs snapshot -r ${pool}@${now}
     else
         zfs snapshot -r ${pool}@cron_${now}
-        zfs destroy -r ${pool}@cron_${prev}
+        if (( $(zfs list -t snap | grep ${pool}@cron_${prev} | wc -l) > 0 )); then
+            zfs destroy -r ${pool}@cron_${prev}
+        fi
     fi
 done
