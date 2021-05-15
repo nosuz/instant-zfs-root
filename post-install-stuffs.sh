@@ -94,6 +94,9 @@ crontab -l | \
     (cat ; echo "@hourly /root/bin/zfs-snapshot.sh -h";) | \
     crontab -
 
+# copy other utils.
+cp $SCRIPT_DIR/scripts/replace-zfs-drive.sh /root/bin
+
 # install backup script
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
 cp $SCRIPT_DIR/backup/watch-backup.sh /root/bin/
