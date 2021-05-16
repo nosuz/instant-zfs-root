@@ -33,6 +33,13 @@ function notify-send() {
 
     sudo -u $user DISPLAY=$display DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus notify-send "$@"
 }
+
+if [[ -e /tmp/no-backup-zfs ]]; then
+    log "Backup is temporary disabled."
+    notify-send "Backup is temporary disabled."
+    exit
+fi
+
 # get lock
 [[ $FLOCKER != $0 ]] && exec env FLOCKER=$0 flock --exclusive --nonblock "$0" "$0" "$@"
 
