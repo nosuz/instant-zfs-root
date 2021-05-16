@@ -1,21 +1,19 @@
 #!/bin/bash
 export PATH=$PATH:/usr/sbin:/sbin
 
+num_snap=2 # number to keep snapshots.
+
+prefix=""
 format='+%Y%m%d_%H%M'
 now=$(date $format)
-prev=""
 
 while getopts "dh" opt; do
     case $opt in
         d)
-            format='+%Y%m%d'
-            now=$(date $format)
-            prev=$(date $format --date '1 day ago')
+            prefix="daily"
         ;;
         h)
-            format='+%Y%m%d_%H%M'
-            now=$(date $format)
-            prev=$(date $format --date '1 hour ago')
+            prefix="hourly"
         ;;
     esac
 done
@@ -23,12 +21,12 @@ done
 sleep $((RANDOM % 20))
 
 for pool in $(zpool list -H -o health,name | awk '{if ($1 == "ONLINE") print $2}'); do
-    if [[ -z $prev ]]; then
+    if [[ -z $prefix ]]; then
         zfs snapshot -r ${pool}@${now}
     else
-        zfs snapshot -r ${pool}@cron_${now}
-        if (( $(zfs list -t snap | grep ${pool}@cron_${prev} | wc -l) > 0 )); then
-            zfs destroy -r ${pool}@cron_${prev}
-        fi
+        zfs snapshot -r ${pool}@${prefix}_${now}
+        for prev in $(zfs list -t snap | grep ${pool}@${prefix}_ | awk '{print $1}' | sort |head -n -${num_snap}); do
+            zfs destroy -r $prev
+        done
     fi
 done
