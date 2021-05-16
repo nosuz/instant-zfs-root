@@ -12,7 +12,6 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 now=$(date +%Y%m%d_%H%M)
 script_name=$(basename $0)
-distri=$(lsb_release -i | awk '{print $3}')
 
 function log() {
     echo "$@" | tee >(nc -NU /tmp/backup 2> /dev/null)
