@@ -12,7 +12,6 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 now=$(date +%Y%m%d_%H%M)
 script_name=$(basename $0)
-distri=$(lsb_release -i | awk '{print $3}')
 
 function log() {
     echo "$@" | tee >(nc -NU /tmp/backup 2> /dev/null)
@@ -34,6 +33,13 @@ function notify-send() {
 
     sudo -u $user DISPLAY=$display DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus notify-send "$@"
 }
+
+if [[ -e /tmp/no-backup-zfs ]]; then
+    log "Backup is temporary disabled."
+    notify-send "Backup is temporary disabled."
+    exit
+fi
+
 # get lock
 [[ $FLOCKER != $0 ]] && exec env FLOCKER=$0 flock --exclusive --nonblock "$0" "$0" "$@"
 
