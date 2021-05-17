@@ -123,8 +123,10 @@ ZFS properties
     Enable auto trim.
 
     On the zpool manual, enableing auto trim property puts significant
-    stress on the strage devices. So, they recommend to run periodical
-    zpool trim command for lower end devices.
+    stress on strage devices.So, they recommend to run periodical zpool
+    trim command for lower end devices.
+
+    This program make a entry to run trim command monthly by default.
 
 --copies=(2|3)
     Set copies property on zpool. This option might be rescue from
