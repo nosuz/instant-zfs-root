@@ -37,7 +37,15 @@ if [[ -e efi/EFI/boot/refind_x64.efi ]]; then
     fi
 fi
 
-rsync -av --copy-links --delete --delete-before --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' --modify-window=1 /boot/ /boot/efi/EFI/${distri,,}
+rsync -av --copy-links --delete --delete-before \
+    --filter='- *.old' \
+    --filter="- $kernel" \
+    --filter="- $initrd" \
+    --filter='+ vmlinuz*' \
+    --filter='+ initrd.img*' \
+    --filter='- *' \
+    --modify-window=1 \
+    /boot/ /boot/efi/EFI/${distri,,}
 
 efi_id=$(ls /boot | grep EFIid)
 
