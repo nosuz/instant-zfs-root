@@ -336,10 +336,10 @@ kernel_ver=$(uname -r)
 case "$distri" in
     "Ubuntu")
         case "$release" in
-            @(19|20).@(04|10))
-                :
-                ;;
-            21.04)
+#            21.10)
+#                :
+#                ;;
+            @(19|20|21).@(04|10))
                 :
                 ;;
             *)
