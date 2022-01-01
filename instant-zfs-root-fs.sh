@@ -587,7 +587,7 @@ fi
 if [[ $bootmng == "grub" ]]; then
     grub_pkg="grub-efi-amd64-signed shim-signed"
 fi
-apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr gawk pv $grub_pkg
+apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr gawk pv dosfstools $grub_pkg
 if (( $? != 0 )); then
     echo Failed to install required packages.
     exit
