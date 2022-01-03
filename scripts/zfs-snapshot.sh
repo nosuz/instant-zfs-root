@@ -5,18 +5,19 @@ num_snap=2 # number to keep snapshots.
 
 prefix=""
 format='+%Y%m%d_%H%M'
-now=$(date $format)
 
 while getopts "dh" opt; do
     case $opt in
         d)
             prefix="daily"
+            format='+%Y%m%d'
         ;;
         h)
             prefix="hourly"
         ;;
     esac
 done
+now=$(date $format)
 
 sleep $((RANDOM % 20))
 

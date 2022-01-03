@@ -100,14 +100,14 @@ Options:
     Set a kernel option. Repeat this option if more than two options are required.
 
 -p pool_name
-    specify pool name
+    Specify pool name. Default pool name is your host name, ${zfs_pool}.
 
 -R
     Reboot automatically when prepared ZFS root filesystem.
 
 -s
-    Single ZFS filesystem. /(root) and /home are placed
-    on the same filesystem.
+    Set single ZFS filesystem. /(root) and /home are placed
+    on the same filesystem. Root and home are separated datasets each other at default.
 
 -t timeout_sec
     Specify timeout for boot managers.
@@ -123,8 +123,10 @@ ZFS properties
     Enable auto trim.
 
     On the zpool manual, enableing auto trim property puts significant
-    stress on the strage devices. So, they recommend to run periodical
-    zpool trim command for lower end devices.
+    stress on strage devices.So, they recommend to run periodical zpool
+    trim command for lower end devices.
+
+    This program make a entry to run trim command monthly by default.
 
 --copies=(2|3)
     Set copies property on zpool. This option might be rescue from
@@ -585,7 +587,7 @@ fi
 if [[ $bootmng == "grub" ]]; then
     grub_pkg="grub-efi-amd64-signed shim-signed"
 fi
-apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr gawk pv $grub_pkg
+apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr gawk pv dosfstools $grub_pkg
 if (( $? != 0 )); then
     echo Failed to install required packages.
     exit
