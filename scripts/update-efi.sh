@@ -13,6 +13,15 @@ distri=$(lsb_release -i | awk '{print $3}')
 echo --- update EFI ---
 date
 
+efi_phy_path=$(findmnt -o SOURCE -n /boot/efi)
+grep "$efi_phy_path " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
+if (( ! $?)); then
+    echo $efi_phy_path is mounted as RO. There might be inconsistency. Fix it by dosfsck
+    umount /boot/efi
+    dosfsck -w -a -t $efi_phy_path
+    mount $efi_phy_path /boot/efi
+fi
+
 kernel=$(ls -v vmlinuz-* | tail -n 1)
 initrd="initrd.img-${kernel#vmlinuz-}"
 
@@ -61,7 +70,7 @@ if (( $updated )); then
     fi
     mkdir /tmp/efi
 
-    efi_uuid=$(lsblk -n -o UUID $(findmnt -o SOURCE -n /boot/efi))
+    efi_uuid=$(lsblk -n -o UUID $efi_phy_path)
     for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
         if [[ $efi_uuid = $uuid ]]; then
             echo current EFI partition: $efi_uuid
@@ -75,6 +84,15 @@ if (( $updated )); then
 
         if [[ -e /tmp/efi/$efi_id ]]; then
             # same EFI group
+            grep " /tmp/efi " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
+            if (( ! $?)); then
+                echo $uuid is mounted on /etc/efi as RO. There might be inconsistency. Fix it by dosfsck
+                tmp_phy_path=$(findmnt -o SOURCE -n /tmp/efi)
+                umount /tmp/efi
+                dosfsck -w -a -t $tmp_phy_path
+                mount UUID=$uuid /tmp/efi
+            fi
+
             # sync files in EFI patition.
             rsync -av --delete --delete-before --modify-window=1 /boot/efi/ /tmp/efi
         else
