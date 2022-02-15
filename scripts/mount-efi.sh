@@ -32,3 +32,21 @@ for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
         umount /boot/efi
     fi
 done
+
+# check permit
+efi_phy_path=$(findmnt -o SOURCE -n /boot/efi)
+grep "$efi_phy_path " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
+if (( ! $?)); then
+    cat << "EOF"
+$efi_phy_path is mounted as RO. There might be inconsistency.
+Fix it followed by the next commands.
+
+umount /boot/efi
+dosfsck -w -a -t $efi_phy_path
+mount $efi_phy_path /boot/efi
+EOF
+else
+    echo Mounted $efi_phy_path on /boot/efi properly.
+fi
+
+echo Done.
