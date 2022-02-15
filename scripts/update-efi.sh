@@ -86,7 +86,7 @@ if (( $updated )); then
             # same EFI group
             grep " /tmp/efi " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
             if (( ! $?)); then
-                echo $uuid is mounted on /etc/efi as RO. There might be inconsistency. Fix it by dosfsck
+                echo $uuid is mounted on /tmp/efi as RO. There might be inconsistency. Fix it by dosfsck
                 tmp_phy_path=$(findmnt -o SOURCE -n /tmp/efi)
                 umount /tmp/efi
                 dosfsck -w -a -t $tmp_phy_path
