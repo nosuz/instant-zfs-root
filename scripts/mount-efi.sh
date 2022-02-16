@@ -37,7 +37,7 @@ done
 efi_phy_path=$(findmnt -o SOURCE -n /boot/efi)
 grep "$efi_phy_path " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
 if (( ! $?)); then
-    cat << "EOF"
+    cat << EOF
 $efi_phy_path is mounted as RO. There might be inconsistency.
 Fix it followed by the next commands.
 

@@ -59,7 +59,7 @@ if (( $?)); then
     fi
 else
 # mounted as ro
-cat << "EOF"
+cat << EOF
 $efi_phy_path is mounted as RO. There might be inconsistency.
 Fix it followed by the next commands.
 
@@ -118,7 +118,7 @@ for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
         else
             # mounted as ro
             tmp_phy_path=$(findmnt -o SOURCE -n /tmp/efi)
-            cat << "EOF"
+            cat << EOF
 $uuid is mounted on /tmp/efi as RO. There might be inconsistency.
 Fix it followed by the next commands.
 
