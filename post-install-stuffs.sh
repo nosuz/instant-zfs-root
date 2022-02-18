@@ -97,6 +97,24 @@ crontab -l | \
 # copy other utils.
 cp $SCRIPT_DIR/scripts/replace-zfs-drive.sh /root/bin
 
+# install EFI mout check program
+cp $SCRIPT_DIR/scripts/notify-efi-mount-error.sh /boot
+cat << EOF >> /etc/profile
+
+# check EFI is mouted as RW
+/boot/notify-efi-mount-error.sh
+
+EOF
+
+cat << EOF > /etc/xdg/autostart/mount-efi.desktop
+[Desktop Entry]
+Type=Application
+Name=My Script
+Exec=/boot/notify-efi-mount-error.sh
+Icon=system-run
+X-GNOME-Autostart-enabled=true
+EOF
+
 # install backup script
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
 cp $SCRIPT_DIR/backup/watch-backup.sh /root/bin/
