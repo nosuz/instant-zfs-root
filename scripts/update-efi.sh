@@ -21,14 +21,14 @@ updated=0
 
 cmp -s $kernel efi/EFI/${distri,,}/vmlinuz
 if (( $? )); then
-    echo "update vmlinux to $kernel ($diff sec)"
+    echo "update vmlinux to $kernel"
     ln -sf $kernel vmlinuz
     updated=1
 fi
 
 cmp -s $initrd efi/EFI/${distri,,}/initrd.img
 if (( $? )); then
-    echo "update initrd to $initrd ($diff sec)"
+    echo "update initrd to $initrd"
     ln -sf $initrd initrd.img
     updated=1
 fi
