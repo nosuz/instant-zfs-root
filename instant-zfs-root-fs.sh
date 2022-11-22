@@ -278,10 +278,11 @@ while getopts "b:e:fho:p:Rst:uvz:-:" opt; do
         zpool_opts+=("-O snapdir=visible")
         ;;
     --swap)
-        if (( $optarg == 0 )); then
-            swap_size=""
-        elif [[ $optarg =~ ^[0-9]+$ ]]; then
+        if [[ $optarg =~ ^[0-9]+$ ]]; then
             swap_size=$optarg
+            if [[ $optarg -eq 0 ]]; then
+                swap_size=""
+            fi
         else
             echo swap size must be ineger in gibibyte.
             exit
