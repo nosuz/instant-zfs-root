@@ -119,6 +119,12 @@ Options:
     Specify vdev to create.
 
 ZFS properties
+--ashift=ASHIFT_VALUE
+    Set ashift value.
+
+    9 to 16 are acceptable for ASHIFT_VALUE. If not set this option or
+    set 0 as ASHIFT_VALUE, the auto-detected value is used.
+
 --autotrim
     Enable auto trim.
 
@@ -288,6 +294,20 @@ while getopts "b:e:fho:p:Rst:uvz:-:" opt; do
             exit
         fi
         ;;
+    --ashift)
+        if [[ -z $optarg ]]; then
+            echo No ashift value.
+            exit
+        elif [[ $optarg -eq 0 ]]; then
+            zpool_opts+=("-o ashift=0")
+        elif [[ $optarg -ge 9 ]] &&  [[ $optarg -le 16 ]]; then
+            zpool_opts+=("-o ashift=$optarg")
+        else
+            echo "ashift must be 0 (auto) or 9 to 16."
+            exit
+        fi
+        ;;
+
     esac
 done
 
@@ -710,7 +730,7 @@ echo ${zpool_opts[@]}
 # create ZFS pool
 # all ZFS features are enabled by default
 zpool create -R $altroot -f \
-      -o ashift=12 -o autoexpand=on \
+      -o autoexpand=on \
       -O atime=off -O canmount=off -O mountpoint=none \
       ${zpool_opts[@]} \
       $zfs_pool ${zpool_target}
