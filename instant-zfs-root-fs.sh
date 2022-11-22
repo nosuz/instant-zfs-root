@@ -261,32 +261,32 @@ while getopts "b:e:fho:p:Rst:uvz:-:" opt; do
             esac
             ;;
 	--copies)
-            if [[ $optarg =~ ^(2|3)$ ]]; then
-                zpool_opts+=("-O copies=$optarg")
-            else
-                echo copy number must be 1 to 3.
-                exit
-            fi
-            ;;
-        --hibernate)
-            hibernate=1
-            ;;
-        --autotrim)
-            zpool_opts+=("-o autotrim=on")
-            ;;
-        --snapdir)
-            zpool_opts+=("-O snapdir=visible")
-            ;;
-        --swap)
-            if (( $optarg == 0 )); then
-                swap_size=""
-            elif [[ $optarg =~ ^[0-9]+$ ]]; then
-                swap_size=$optarg
-            else
-                echo swap size must be ineger in gibibyte.
-                exit
-            fi
-            ;;
+        if [[ $optarg =~ ^(2|3)$ ]]; then
+            zpool_opts+=("-O copies=$optarg")
+        else
+            echo copy number must be 1 to 3.
+            exit
+        fi
+        ;;
+    --hibernate)
+        hibernate=1
+        ;;
+    --autotrim)
+        zpool_opts+=("-o autotrim=on")
+        ;;
+    --snapdir)
+        zpool_opts+=("-O snapdir=visible")
+        ;;
+    --swap)
+        if (( $optarg == 0 )); then
+            swap_size=""
+        elif [[ $optarg =~ ^[0-9]+$ ]]; then
+            swap_size=$optarg
+        else
+            echo swap size must be ineger in gibibyte.
+            exit
+        fi
+        ;;
     esac
 done
 
