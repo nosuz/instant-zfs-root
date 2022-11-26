@@ -383,6 +383,18 @@ case "$distri" in
                 ;;
         esac
         ;;
+    "Debian")
+        # For open.Yellow.os
+        case "$release" in
+            22.11-*)
+                :
+                ;;
+            *)
+                echo open.Yellow.os $release is not supported by this script.
+                exit
+                ;;
+        esac
+        ;;
     *)
         echo $distri is not supported by this script.
         exit
