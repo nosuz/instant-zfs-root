@@ -1,3 +1,5 @@
 *~
 refind-latest.zip
 refind/
+backup-skip.list
+post-install.log
