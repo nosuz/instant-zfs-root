@@ -401,6 +401,13 @@ case "$distri" in
         ;;
 esac
 
+echo Check SecureBoot status
+mokutil --sb-state |grep disabled
+if (( $? != 0 )); then
+    echo Make sure SecureBoot is disabled.
+    exit
+fi
+
 # GRUB can't recognize not all ZFS features like encryption.
 if [[ $bootmng == "grub" ]] && (( $zfs_encrypt == 1 )); then
     echo
