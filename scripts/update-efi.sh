@@ -96,15 +96,15 @@ for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
             if (( $updated )); then
                 # sync files in EFI patition.
                 # rsync -av --delete --delete-before --modify-window=1 /boot/efi/ /tmp/efi
-            rsync -av --copy-links --delete --delete-before \
-                --filter='- *.old' \
-                --filter="- $kernel" \
-                --filter="- $initrd" \
-                --filter='+ vmlinuz*' \
-                --filter='+ initrd.img*' \
-                --filter='- *' \
-                --modify-window=1 \
-                /boot/ /tmp/efi/EFI/${distri,,}
+                rsync -av --copy-links --delete --delete-before \
+                    --filter='- *.old' \
+                    --filter="- $kernel" \
+                    --filter="- $initrd" \
+                    --filter='+ vmlinuz*' \
+                    --filter='+ initrd.img*' \
+                    --filter='- *' \
+                    --modify-window=1 \
+                    /boot/ /tmp/efi/EFI/${distri,,}
             fi
 
             # revert bootx64 to refind
