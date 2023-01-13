@@ -133,6 +133,7 @@ EOF
     fi
 
     umount /tmp/efi
+    echo umount $uuid
 done
 
 echo Done.
