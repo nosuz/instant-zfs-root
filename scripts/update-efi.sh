@@ -47,6 +47,8 @@ if (( $?)); then
             --filter='- *' \
             --modify-window=1 \
             /boot/ /boot/efi/EFI/${distri,,}
+    else
+        echo No kernel updated.
     fi
 
     # revert bootx64 to refind
