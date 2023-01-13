@@ -96,8 +96,7 @@ for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
         if (($?)); then
             # mounted as rw
             if (( $updated )); then
-                # sync files in EFI patition.
-                # rsync -av --delete --delete-before --modify-window=1 /boot/efi/ /tmp/efi
+                # sync kernels
                 rsync -av --copy-links --delete --delete-before \
                     --filter='- *.old' \
                     --filter="- $kernel" \
@@ -108,6 +107,8 @@ for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
                     --modify-window=1 \
                     /boot/ /tmp/efi/EFI/${distri,,}
             fi
+            # sync files in EFI patition.
+            rsync -av --delete --delete-before --modify-window=1 /boot/efi/EFI/ /tmp/efi/EFI
 
             # revert bootx64 to refind
             if [[ -e /tmp/efi/EFI/boot/refind_x64.efi ]]; then
