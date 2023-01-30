@@ -18,7 +18,6 @@ altroot='/tmp/root'
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
-pushd .
 cd $SCRIPT_DIR
 
 INSTALL_EFI_ENTRY="install_efi_entry.sh"
@@ -321,7 +320,6 @@ shift $(($OPTIND - 1))
 
 # grant by ROOT is required
 if (( $EUID != 0 )); then
-    popd
     exec sudo "$0" $COMMAND_ARGS
 fi
 
@@ -1166,5 +1164,3 @@ read answer
 if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
     reboot
 fi
-
-popd
