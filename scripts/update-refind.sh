@@ -27,27 +27,3 @@ cp /boot/efi/EFI/boot/refind.conf refind
 
 #rsync -avn --delete refind/ /boot/efi/EFI/boot
 rsync -av refind/ /boot/efi/EFI/boot
-
-efi_id=$(ls /boot | grep EFIid)
-
-efi_uuid=$(lsblk -n -o UUID $(findmnt -o SOURCE -n /boot/efi))
-for uuid in $(lsblk -o LABEL,UUID | awk '{if ($1 == "EFI") print $2}'); do
-    if [[ $efi_uuid = $uuid ]]; then
-        echo current EFI partition: $efi_uuid
-        continue
-    else
-        echo mount $uuid
-    fi
-
-    # mount EFI partition
-    mount UUID=$uuid $mountpoint
-
-    if [[ -e $mountpoint/$efi_id ]]; then
-        echo This is our EFI partition.
-        rsync -av refind/ $mountpoint/EFI/boot
-    else
-        echo another system EFI partition.
-    fi
-    umount $mountpoint
-
-done

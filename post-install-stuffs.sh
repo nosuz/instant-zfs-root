@@ -40,51 +40,6 @@ else
     exit
 fi
 
-cp $SCRIPT_DIR/scripts/mount-efi.sh /boot
-
-# https://www.golinuxcloud.com/run-script-at-startup-boot-without-cron-linux/
-cat << EOF > /etc/systemd/system/mount-efi.service
-[Unit]
-# Execute command after reboot
-Description=Mount EFI partition.
-After=default.target
-
-[Service]
-Type=simple
-RemainAfterExit=no
-ExecStart=/boot/mount-efi.sh
-TimeoutStartSec=0
-
-[Install]
-WantedBy=default.target
-EOF
-
-systemctl enable mount-efi
-systemctl start mount-efi
-
-sleep 5
-
-cp $SCRIPT_DIR/scripts/update-efi.sh /boot
-
-cat << EOF > /etc/systemd/system/update-efi.service
-[Unit]
-# Execute command before shutdown/reboot [duplicate]
-# https://askubuntu.com/questions/416299/execute-command-before-shutdown-reboot
-Description=Copy latest kernel to EFI patitions.
-
-[Service]
-Type=oneshot
-RemainAfterExit=true
-ExecStart=/bin/true
-ExecStop=/boot/update-efi.sh
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable update-efi
-systemctl start update-efi
-
 mkdir -p /root/bin
 cp $SCRIPT_DIR/scripts/trim-zfs-pools.sh /root/bin
 crontab -l | (cat ; echo "@monthly /root/bin/trim-zfs-pools.sh";) | crontab -
@@ -96,24 +51,6 @@ crontab -l | \
 
 # copy other utils.
 cp $SCRIPT_DIR/scripts/replace-zfs-drive.sh /root/bin
-
-# install EFI mout check program
-cp $SCRIPT_DIR/scripts/notify-efi-mount-error.sh /boot
-cat << EOF >> /etc/profile
-
-# check EFI is mouted as RW
-/boot/notify-efi-mount-error.sh
-
-EOF
-
-cat << EOF > /etc/xdg/autostart/mount-efi.desktop
-[Desktop Entry]
-Type=Application
-Name=My Script
-Exec=/boot/notify-efi-mount-error.sh
-Icon=system-run
-X-GNOME-Autostart-enabled=true
-EOF
 
 # install backup script
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/

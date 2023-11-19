@@ -627,7 +627,7 @@ fi
 if [[ $bootmng == "grub" ]]; then
     grub_pkg="grub-efi-amd64-signed shim-signed"
 fi
-apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr gawk pv dosfstools $grub_pkg
+apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr mdadm gawk pv dosfstools $grub_pkg
 if (( $? != 0 )); then
     echo Failed to install required packages.
     exit
@@ -730,10 +730,6 @@ for drive in ${drives[@]}; do
     # create 1G smaller partition
     #sgdisk -n 2:0:-1G -t 2:8300 /dev/$drive # Linux Filesystem
 
-    # create EFI boot partition
-    mkdosfs -F 32 -s 1 -n EFI /dev/${efi}
-    #mkfs.vfat -F 32 -s 1 -n EFI /dev/${efi}
-
     sgdisk -p /dev/$drive
 done
 if (( $hibernate == 1 )); then
@@ -773,6 +769,42 @@ if (( $single_fs != 1 )); then
         -o mountpoint=/home \
         $zfs_pool/${distri^^}/home
 fi
+
+# Prefix and postfix elements of a bash array
+# https://stackoverflow.com/a/20366649
+EXPANDED=()
+for drive in "${drives[@]}"; do
+    case "$drive" in
+        [sv]d*)
+            EXPANDED+=("/dev/${drive}1")
+            ;;
+        nvme*)
+            EXPANDED+=("/dev/${drive}p1")
+            ;;
+        *)
+            EXPANDED+=("/dev/${drive}1")
+            ;;
+    esac
+done
+# make EFI mirror
+if [[ -e /dev/md0 ]]; then
+    echo
+    echo "/dev/md0 is exist."
+    echo -n "Are you sure to remove existing md0? [yes/NO] "
+    read answer
+    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+        mdadm --stop /dev/md0
+        mdadm --zero-superblock ${EXPANDED[@]}
+    else
+        exit
+    fi
+fi
+# metadata 1.0 is mandatoly
+# https://unix.stackexchange.com/a/325229
+mdadm --create --metadata=1.0 --level=mirror /dev/md0 --raid-devices=${#EXPANDED[@]} ${EXPANDED[@]}
+# create EFI boot partition
+mkdosfs -F 32 -s 1 -n EFI /dev/md0
+#mkfs.vfat -F 32 -s 1 -n EFI /dev/md0
 
 touch backup-skip.list
 if [[ -n $swap_size ]] && (( $hibernate != 1 )); then
@@ -834,8 +866,8 @@ echo Edit /etc/fstab
 # comment out all
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
 echo \# --- >> $altroot/etc/fstab
-echo \# Mount EFI partition by systemctl service at booting. >> $altroot/etc/fstab
-echo \# LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
+echo \# Mount EFI partition. >> $altroot/etc/fstab
+echo "/dev/md0 /boot/efi vfat defaults 0 0" >> $altroot/etc/fstab
 
 if (( $hibernate == 1 )); then
     echo "UUID=$swap_uuid none swap sw 0 0" >> $altroot/etc/fstab
@@ -857,6 +889,8 @@ if (( $edit_fstab == 1 )); then
     # edit /etc/fstab
     nano $altroot/etc/fstab
 fi
+
+mdadm --detail /dev/md0 >> $altroot/etc/mdadm/mdadm.conf
 
 # remove zpool.cache to accept zpool struct change
 if [[ -e $altroot/etc/zfs/zpool.cache ]]; then
@@ -903,38 +937,24 @@ if [[ $bootmng == "grub" ]]; then
     if [[ ! -d $altroot/boot/efi ]]; then
         mkdir -p $altroot/boot/efi
     fi
-    for drive in ${drives[@]}; do
-        case "$drive" in
-            [sv]d*)
-                efi="${drive}1"
-                ;;
-            nvme*)
-                efi="${drive}p1"
-                ;;
-            *)
-                efi="${drive}1"
-                ;;
-        esac
+    mount /dev/md0 $altroot/boot/efi
+    # make fingerprint file
+    touch $altroot/boot/efi/$efi_id
+    if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
+        mkdir -p $altroot/boot/efi/EFI/${distri,,}
+    fi
 
-        mount /dev/${efi} $altroot/boot/efi
-        # make fingerprint file
-        touch $altroot/boot/efi/$efi_id
-        if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
-            mkdir -p $altroot/boot/efi/EFI/${distri,,}
-        fi
+    rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
 
-        rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
+    echo
+    echo Install Grub to EFI
+    chroot $altroot update-grub
+    chroot $altroot grub-install \
+            --efi-directory=/boot/efi \
+            --bootloader-id=${distri,,} \
+            --recheck --no-floppy
 
-        echo
-        echo Install Grub to $drive
-        chroot $altroot update-grub
-        chroot $altroot grub-install \
-               --efi-directory=/boot/efi \
-               --bootloader-id=${distri,,} \
-               --recheck --no-floppy
-
-        umount $altroot/boot/efi
-    done
+    umount $altroot/boot/efi
 
     umount $altroot/tmp
 
@@ -1019,6 +1039,19 @@ EOF_CONF
     if [[ ! -e /tmp/efi ]]; then
         mkdir /tmp/efi
     fi
+
+    mount /dev/md0 /tmp/efi
+    # make fingerprint file
+    touch /tmp/efi/$efi_id
+    mkdir -p /tmp/efi/EFI/${distri,,}
+
+    rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
+
+    # install rEFInd
+    cp -r refind/. /tmp/efi/EFI/boot
+    umount /tmp/efi
+
+    # make EFI boot entry
     for drive in ${drives[@]}; do
         case "$drive" in
             [sv]d*)
@@ -1031,16 +1064,6 @@ EOF_CONF
                 efi="${drive}1"
                 ;;
         esac
-
-        mount /dev/${efi} /tmp/efi
-        # make fingerprint file
-        touch /tmp/efi/$efi_id
-        mkdir -p /tmp/efi/EFI/${distri,,}
-
-        rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
-
-        # install rEFInd
-        cp -pr refind/. /tmp/efi/EFI/boot
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
@@ -1081,9 +1104,10 @@ efibootmgr -c -d /dev/$drive -p 1 \
 EOF_SH
             fi
         fi
-        umount /tmp/efi
     done
 fi
+
+mdadm --stop /dev/md0
 
 if (( $has_serial == 1 )); then
     # make symlinks for ZFS drives
