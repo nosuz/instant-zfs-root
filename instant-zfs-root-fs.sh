@@ -696,7 +696,7 @@ for drive in ${drives[@]}; do
 
     sgdisk --zap-all /dev/$drive
     sgdisk --clear /dev/$drive
-    sgdisk --new=1:1M:+512M \
+    sgdisk --new=1:1M:+1G \
            --typecode=1:EF00 \
            --change-name=1:EFI \
            /dev/$drive
