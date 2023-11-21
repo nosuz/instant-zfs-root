@@ -999,7 +999,8 @@ fi
 
 for d in proc sys dev run;do
     echo "unmount $d"
-    umount -lfR $altroot/$d
+    # without -l option, fail to export pool.
+    umount -lR $altroot/$d
 done
 
 if [[ $bootmng != "grub" ]]; then
@@ -1182,6 +1183,12 @@ while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
     sleep 2
     zpool export $zfs_pool
 done
+
+# workaraound to fix an error
+# sudo: unable to allocate pty
+# mount --make-rprivate fixed the error but fail to export.
+# https://unix.stackexchange.com/a/371208
+mount -t devpts pts /dev/pts
 
 # show final message
 echo Finished.
