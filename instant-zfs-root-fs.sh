@@ -18,6 +18,14 @@ altroot='/tmp/root'
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
+# https://unix.stackexchange.com/a/424656
+if [ -z "$SCRIPT_LOG" ]; then
+    export SCRIPT_LOG=$(date "+instant-zfs_%Y%m%d%H%M%S.log")
+    /usr/bin/script $SCRIPT_LOG -c "$0 $*"
+    unset SCRIPT_LOG
+    exit 0
+fi
+
 pushd .
 cd $SCRIPT_DIR
 
@@ -322,7 +330,7 @@ shift $(($OPTIND - 1))
 # grant by ROOT is required
 if (( $EUID != 0 )); then
     popd
-    exec sudo "$0" $COMMAND_ARGS
+    exec sudo SCRIPT_LOG=$SCRIPT_LOG "$0" $COMMAND_ARGS
 fi
 
 if (( $zfs_encrypt == 1)); then
