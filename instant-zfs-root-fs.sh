@@ -33,7 +33,7 @@ INSTALL_EFI_ENTRY="install_efi_entry.sh"
 
 single_fs=0
 edit_fstab=0
-do_reboot=0
+do_poweroff=0
 encrypt_opts=""
 encrypt_key=""
 bootmng=""
@@ -110,8 +110,8 @@ Options:
 -p pool_name
     Specify pool name. Default pool name is your host name, ${zfs_pool}.
 
--R
-    Reboot automatically when prepared ZFS root filesystem.
+-P
+    Power-off automatically when prepared ZFS root filesystem.
 
 -s
     Set single ZFS filesystem. /(root) and /home are placed
@@ -237,8 +237,8 @@ while getopts "b:e:fho:p:Rst:uvz:-:" opt; do
         -p)
             zfs_pool=$optarg
             ;;
-        -R)
-            do_reboot=1
+        -P)
+            do_poweroff=1
             ;;
         -s)
             single_fs=1
@@ -1189,14 +1189,14 @@ if (( $efi_boot == 0 )); then
     echo 3. Excec next command
     echo sh $SCRIPT_DIR/$INSTALL_EFI_ENTRY
     echo
-elif (( $do_reboot == 1 )); then
-    reboot
+elif (( $do_poweroff == 1 )); then
+    poweroff
 fi
 
-echo -n "Reboot now? [yes/NO] "
+echo -n "Power off now? [yes/NO] "
 read answer
 if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-    reboot
+    poweroff
 fi
 
 popd
