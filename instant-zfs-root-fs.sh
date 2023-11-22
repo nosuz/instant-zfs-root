@@ -551,8 +551,26 @@ else
     esac
 fi
 
-echo Make $zpool_type
-echo Make $zpool_target
+# Prefix and postfix elements of a bash array
+# https://stackoverflow.com/a/20366649
+efis=()
+for drive in "${drives[@]}"; do
+    case "$drive" in
+        [sv]d*)
+            efis+=("${drive}1")
+            ;;
+        nvme*)
+            efis+=("${drive}p1")
+            ;;
+        *)
+            efis+=("${drive}1")
+            ;;
+    esac
+done
+echo Mirroring EFI: ${efis[@]}
+echo
+echo Make ZFS $zpool_type
+echo Members: $zpool_target
 
 echo -n "Last chance. Are you sure? [yes/NO] "
 read answer
@@ -778,22 +796,6 @@ if (( $single_fs != 1 )); then
         $zfs_pool/${distri^^}/home
 fi
 
-# Prefix and postfix elements of a bash array
-# https://stackoverflow.com/a/20366649
-EXPANDED=()
-for drive in "${drives[@]}"; do
-    case "$drive" in
-        [sv]d*)
-            EXPANDED+=("/dev/${drive}1")
-            ;;
-        nvme*)
-            EXPANDED+=("/dev/${drive}p1")
-            ;;
-        *)
-            EXPANDED+=("/dev/${drive}1")
-            ;;
-    esac
-done
 # make EFI mirror
 if [[ -e /dev/md0 ]]; then
     echo
@@ -802,14 +804,14 @@ if [[ -e /dev/md0 ]]; then
     read answer
     if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
         mdadm --stop /dev/md0
-        mdadm --zero-superblock ${EXPANDED[@]}
+        mdadm --zero-superblock ${efis[@]/#//dev/}
     else
         exit
     fi
 fi
 # metadata 1.0 is mandatoly
 # https://unix.stackexchange.com/a/325229
-mdadm --create --metadata=1.0 --level=mirror /dev/md0 --raid-devices=${#EXPANDED[@]} ${EXPANDED[@]}
+mdadm --create --metadata=1.0 --level=mirror /dev/md0 --raid-devices=${#efis[@]} ${efis[@]/#//dev/}
 # create EFI boot partition
 mkdosfs -F 32 -s 1 -n EFI /dev/md0
 #mkfs.vfat -F 32 -s 1 -n EFI /dev/md0
