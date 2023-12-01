@@ -11,7 +11,6 @@ shopt -s extglob
 
 # ZFS default pool name
 zfs_pool=$(hostname | tr [:upper:] [:lower:])
-efi_id=$(date "+EFIid_${zfs_pool}_%Y%m%d%H%M%S")
 altroot='/tmp/root'
 
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
@@ -926,9 +925,6 @@ ln -sf vmlinuz-$kernel_ver vmlinuz
 ln -sf initrd.img-$kernel_ver initrd.img
 popd > /dev/null
 
-# make efi_id file
-touch $altroot/boot/$efi_id
-
 boot_args=${boot_opts[@]}
 sed -i.orig \
     -e "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$bootmng_timeout/" \
@@ -948,8 +944,6 @@ if [[ $bootmng == "grub" ]]; then
         mkdir -p $altroot/boot/efi
     fi
     mount /dev/md0 $altroot/boot/efi
-    # make fingerprint file
-    touch $altroot/boot/efi/$efi_id
     if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
         mkdir -p $altroot/boot/efi/EFI/${distri,,}
     fi
@@ -1052,8 +1046,6 @@ EOF_CONF
     fi
 
     mount /dev/md0 /tmp/efi
-    # make fingerprint file
-    touch /tmp/efi/$efi_id
     mkdir -p /tmp/efi/EFI/${distri,,}
 
     rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
