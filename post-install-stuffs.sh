@@ -40,6 +40,27 @@ else
     exit
 fi
 
+cp $SCRIPT_DIR/scripts/update-efi.sh /boot
+
+cat << EOF > /etc/systemd/system/update-efi.service
+[Unit]
+# Execute command before shutdown/reboot [duplicate]
+# https://askubuntu.com/questions/416299/execute-command-before-shutdown-reboot
+Description=Copy latest kernel to EFI patitions.
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/true
+ExecStop=/boot/update-efi.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable update-efi
+systemctl start update-efi
+
 mkdir -p /root/bin
 cp $SCRIPT_DIR/scripts/trim-zfs-pools.sh /root/bin
 crontab -l | (cat ; echo "@monthly /root/bin/trim-zfs-pools.sh";) | crontab -
