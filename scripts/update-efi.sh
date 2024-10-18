@@ -38,12 +38,12 @@ grep "$efi_phy_path " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
 if (( $? )); then
 # mounted as rw
     if (( $updated )); then
+        # keep only latest and previous kernels
         rsync -av --copy-links --delete --delete-before \
-            --filter='- *.old' \
-            --filter="- $kernel" \
-            --filter="- $initrd" \
-            --filter='+ vmlinuz*' \
-            --filter='+ initrd.img*' \
+            --filter='+ vmlinuz' \
+            --filter='+ initrd.img' \
+            --filter='+ vmlinuz.old' \
+            --filter='+ initrd.img.old' \
             --filter='- *' \
             --modify-window=1 \
             /boot/ /boot/efi/EFI/${distri,,}
