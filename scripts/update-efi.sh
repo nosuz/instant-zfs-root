@@ -37,6 +37,10 @@ efi_phy_path=$(findmnt -o SOURCE -n /boot/efi)
 grep "$efi_phy_path " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
 if (( $? )); then
 # mounted as rw
+    # test not blocked: workaround
+    dummy_file=$(date -u +'/boot/efi/%Y%m%d_%H%M%S.tmp')
+    dd bs=1k count=1024 if=/dev/random of=${dummy_file}
+
     if (( $updated )); then
         # keep only latest and previous kernels
         rsync -av --copy-links --delete --delete-before \
@@ -59,6 +63,9 @@ if (( $? )); then
             cp efi/EFI/boot/refind_x64.efi efi/EFI/boot/bootx64.efi
         fi
     fi
+
+    # remove dummy file
+    rm ${dummy_file}
 else
 # mounted as ro
 cat << EOF
