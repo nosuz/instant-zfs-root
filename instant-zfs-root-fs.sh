@@ -1039,6 +1039,15 @@ menuentry "${distri}_ZFS" {
     initrd /EFI/${distri,,}/initrd.img
     options "ro root=ZFS=$zfs_pool/${distri^^}/root $boot_args"
 }
+
+menuentry "previous ${distri}_ZFS" {
+    graphics on
+    ostype Linux
+    loader /EFI/${distri,,}/vmlinuz.old
+    initrd /EFI/${distri,,}/initrd.img.old
+    options "ro root=ZFS=$zfs_pool/${distri^^}/root $boot_args"
+}
+
 EOF_CONF
     cat refind/refind.conf
 
