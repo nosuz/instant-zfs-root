@@ -13,26 +13,6 @@ distri=$(lsb_release -i | awk '{print $3}')
 echo --- update EFI ---
 date
 
-kernel=$(ls -v vmlinuz-* | tail -n 1)
-initrd="initrd.img-${kernel#vmlinuz-}"
-
-# set 1 if updated any files.
-updated=0
-
-cmp -s $kernel efi/EFI/${distri,,}/vmlinuz
-if (( $? )); then
-    echo "update vmlinux to $kernel"
-    ln -sf $kernel vmlinuz
-    updated=1
-fi
-
-cmp -s $initrd efi/EFI/${distri,,}/initrd.img
-if (( $? )); then
-    echo "update initrd to $initrd"
-    ln -sf $initrd initrd.img
-    updated=1
-fi
-
 efi_phy_path=$(findmnt -o SOURCE -n /boot/efi)
 grep "$efi_phy_path " /proc/mounts |grep '[, ]ro[, ]' > /dev/null
 if (( $? )); then
@@ -41,19 +21,15 @@ if (( $? )); then
     dummy_file=$(date -u +'/boot/efi/%Y%m%d_%H%M%S.tmp')
     dd bs=1k count=1024 if=/dev/random of=${dummy_file}
 
-    if (( $updated )); then
-        # keep only latest and previous kernels
-        rsync -av --copy-links --delete --delete-before \
-            --filter='+ vmlinuz' \
-            --filter='+ initrd.img' \
-            --filter='+ vmlinuz.old' \
-            --filter='+ initrd.img.old' \
-            --filter='- *' \
-            --modify-window=1 \
-            /boot/ /boot/efi/EFI/${distri,,}
-    else
-        echo No kernel updated.
-    fi
+    # keep only latest and previous kernels
+    rsync -av --copy-links --delete --delete-before \
+        --filter='+ vmlinuz' \
+        --filter='+ initrd.img' \
+        --filter='+ vmlinuz.old' \
+        --filter='+ initrd.img.old' \
+        --filter='- *' \
+        --modify-window=1 \
+        /boot/ /boot/efi/EFI/${distri,,}
 
     # revert bootx64 to refind
     if [[ -e efi/EFI/boot/refind_x64.efi ]]; then
