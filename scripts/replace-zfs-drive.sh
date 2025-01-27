@@ -54,7 +54,7 @@ esac
 
 sgdisk --zap-all /dev/$new_storage
 sgdisk --clear /dev/$new_storage
-sgdisk --new=1:1M:+512M \
+sgdisk --new=1:1M:+1G \
         --typecode=1:EF00 \
         --change-name=1:EFI \
         /dev/$new_storage
@@ -64,20 +64,7 @@ sgdisk -n 2:0:0 \
         -c 2:ZFS \
         /dev/$new_storage # Linux Filesystem
 
-# create EFI boot partition
-mkdosfs -F 32 -s 1 -n EFI /dev/${efi}
-#mkfs.vfat -F 32 -s 1 -n EFI /dev/${efi}
-
 sgdisk -p /dev/$new_storage
-
-# duplicate EFI partition
-mkdir /tmp/mnt_$$
-mount /dev/${efi} /tmp/mnt_$$
-
-rsync -a /boot/efi/ /tmp/mnt_$$
-
-umount /tmp/mnt_$$
-rmdir /tmp/mnt_$$
 
 # make symlinks for ZFS drives
 udevadm trigger
@@ -103,3 +90,6 @@ echo "Wait a moment to start replacing"
 zpool replace $broken_pool $source_storage $target_storage
 
 zpool status $broken_pool
+
+# create EFI boot partition
+echo "use mdamd to recover EFI partition."

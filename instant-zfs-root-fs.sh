@@ -11,20 +11,28 @@ shopt -s extglob
 
 # ZFS default pool name
 zfs_pool=$(hostname | tr [:upper:] [:lower:])
-efi_id=$(date "+EFIid_${zfs_pool}_%Y%m%d%H%M%S")
 altroot='/tmp/root'
 
 # https://qiita.com/koara-local/items/2d67c0964188bba39e29
 SCRIPT_NAME=$(basename $0)
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
+# https://unix.stackexchange.com/a/424656
+if [ -z "$SCRIPT_LOG" ]; then
+    export SCRIPT_LOG=$(date "+instant-zfs_%Y%m%d%H%M%S.log")
+    /usr/bin/script $SCRIPT_LOG -c "$0 $*"
+    unset SCRIPT_LOG
+    exit 0
+fi
+
+pushd .
 cd $SCRIPT_DIR
 
 INSTALL_EFI_ENTRY="install_efi_entry.sh"
 
 single_fs=0
 edit_fstab=0
-do_reboot=0
+do_poweroff=0
 encrypt_opts=""
 encrypt_key=""
 bootmng=""
@@ -101,8 +109,8 @@ Options:
 -p pool_name
     Specify pool name. Default pool name is your host name, ${zfs_pool}.
 
--R
-    Reboot automatically when prepared ZFS root filesystem.
+-P
+    Power-off automatically when prepared ZFS root filesystem.
 
 -s
     Set single ZFS filesystem. /(root) and /home are placed
@@ -228,8 +236,8 @@ while getopts "b:e:fho:p:Rst:uvz:-:" opt; do
         -p)
             zfs_pool=$optarg
             ;;
-        -R)
-            do_reboot=1
+        -P)
+            do_poweroff=1
             ;;
         -s)
             single_fs=1
@@ -320,7 +328,8 @@ shift $(($OPTIND - 1))
 
 # grant by ROOT is required
 if (( $EUID != 0 )); then
-    exec sudo "$0" $COMMAND_ARGS
+    popd
+    exec sudo SCRIPT_LOG=$SCRIPT_LOG "$0" $COMMAND_ARGS
 fi
 
 if (( $zfs_encrypt == 1)); then
@@ -358,7 +367,7 @@ case "$distri" in
 #            21.10)
 #                :
 #                ;;
-            @(19|20|21|22|23).@(04|10))
+            @(19|20|21|22|23|24).@(04|10))
                 :
                 ;;
             *)
@@ -541,8 +550,26 @@ else
     esac
 fi
 
-echo Make $zpool_type
-echo Make $zpool_target
+# Prefix and postfix elements of a bash array
+# https://stackoverflow.com/a/20366649
+efis=()
+for drive in "${drives[@]}"; do
+    case "$drive" in
+        [sv]d*)
+            efis+=("${drive}1")
+            ;;
+        nvme*)
+            efis+=("${drive}p1")
+            ;;
+        *)
+            efis+=("${drive}1")
+            ;;
+    esac
+done
+echo Mirroring EFI: ${efis[@]}
+echo
+echo Make ZFS $zpool_type
+echo Members: $zpool_target
 
 echo -n "Last chance. Are you sure? [yes/NO] "
 read answer
@@ -625,7 +652,7 @@ fi
 if [[ $bootmng == "grub" ]]; then
     grub_pkg="grub-efi-amd64-signed shim-signed"
 fi
-apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr gawk pv dosfstools $grub_pkg
+apt install -y zfsutils-linux zfs-initramfs gdisk efibootmgr mdadm gawk pv dosfstools $grub_pkg
 if (( $? != 0 )); then
     echo Failed to install required packages.
     exit
@@ -694,7 +721,8 @@ for drive in ${drives[@]}; do
 
     sgdisk --zap-all /dev/$drive
     sgdisk --clear /dev/$drive
-    sgdisk --new=1:1M:+1G \
+    # EFI partition
+    sgdisk --new=1:1M:+768M \
            --typecode=1:EF00 \
            --change-name=1:EFI \
            /dev/$drive
@@ -727,10 +755,6 @@ for drive in ${drives[@]}; do
     # I am not sure. ZFS dones not accept smaller dirves for replace.
     # create 1G smaller partition
     #sgdisk -n 2:0:-1G -t 2:8300 /dev/$drive # Linux Filesystem
-
-    # create EFI boot partition
-    mkdosfs -F 32 -s 1 -n EFI /dev/${efi}
-    #mkfs.vfat -F 32 -s 1 -n EFI /dev/${efi}
 
     sgdisk -p /dev/$drive
 done
@@ -771,6 +795,26 @@ if (( $single_fs != 1 )); then
         -o mountpoint=/home \
         $zfs_pool/${distri^^}/home
 fi
+
+# make EFI mirror
+if [[ -e /dev/md0 ]]; then
+    echo
+    echo "/dev/md0 is exist."
+    echo -n "Are you sure to remove existing md0? [yes/NO] "
+    read answer
+    if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
+        mdadm --stop /dev/md0
+        mdadm --zero-superblock ${efis[@]/#//dev/}
+    else
+        exit
+    fi
+fi
+# metadata 1.0 is mandatoly
+# https://unix.stackexchange.com/a/325229
+mdadm --create --metadata=1.0 --level=mirror /dev/md0 --raid-devices=${#efis[@]} ${efis[@]/#//dev/}
+# create EFI boot partition
+mkdosfs -F 32 -s 1 -n EFI /dev/md0
+#mkfs.vfat -F 32 -s 1 -n EFI /dev/md0
 
 touch backup-skip.list
 if [[ -n $swap_size ]] && (( $hibernate != 1 )); then
@@ -832,8 +876,8 @@ echo Edit /etc/fstab
 # comment out all
 sed -i.orig -e '/^#/!s/^/\#/' $altroot/etc/fstab
 echo \# --- >> $altroot/etc/fstab
-echo \# Mount EFI partition by systemctl service at booting. >> $altroot/etc/fstab
-echo \# LABEL=EFI /boot/efi vfat defaults 0 0 >> $altroot/etc/fstab
+echo \# Mount EFI partition. >> $altroot/etc/fstab
+echo "/dev/md0 /boot/efi vfat defaults 0 0" >> $altroot/etc/fstab
 
 if (( $hibernate == 1 )); then
     echo "UUID=$swap_uuid none swap sw 0 0" >> $altroot/etc/fstab
@@ -855,6 +899,8 @@ if (( $edit_fstab == 1 )); then
     # edit /etc/fstab
     nano $altroot/etc/fstab
 fi
+
+mdadm --detail /dev/md0 >> $altroot/etc/mdadm/mdadm.conf
 
 # remove zpool.cache to accept zpool struct change
 if [[ -e $altroot/etc/zfs/zpool.cache ]]; then
@@ -880,9 +926,6 @@ ln -sf vmlinuz-$kernel_ver vmlinuz
 ln -sf initrd.img-$kernel_ver initrd.img
 popd > /dev/null
 
-# make efi_id file
-touch $altroot/boot/$efi_id
-
 boot_args=${boot_opts[@]}
 sed -i.orig \
     -e "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=$bootmng_timeout/" \
@@ -901,38 +944,22 @@ if [[ $bootmng == "grub" ]]; then
     if [[ ! -d $altroot/boot/efi ]]; then
         mkdir -p $altroot/boot/efi
     fi
-    for drive in ${drives[@]}; do
-        case "$drive" in
-            [sv]d*)
-                efi="${drive}1"
-                ;;
-            nvme*)
-                efi="${drive}p1"
-                ;;
-            *)
-                efi="${drive}1"
-                ;;
-        esac
+    mount /dev/md0 $altroot/boot/efi
+    if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
+        mkdir -p $altroot/boot/efi/EFI/${distri,,}
+    fi
 
-        mount /dev/${efi} $altroot/boot/efi
-        # make fingerprint file
-        touch $altroot/boot/efi/$efi_id
-        if [[ ! -d $altroot/boot/efi/EFI/${distri,,} ]]; then
-            mkdir -p $altroot/boot/efi/EFI/${distri,,}
-        fi
+    rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
 
-        rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ $altroot/boot/efi/EFI/${distri,,}
+    echo
+    echo Install Grub to EFI
+    chroot $altroot update-grub
+    chroot $altroot grub-install \
+            --efi-directory=/boot/efi \
+            --bootloader-id=${distri,,} \
+            --recheck --no-floppy
 
-        echo
-        echo Install Grub to $drive
-        chroot $altroot update-grub
-        chroot $altroot grub-install \
-               --efi-directory=/boot/efi \
-               --bootloader-id=${distri,,} \
-               --recheck --no-floppy
-
-        umount $altroot/boot/efi
-    done
+    umount $altroot/boot/efi
 
     umount $altroot/tmp
 
@@ -967,7 +994,8 @@ fi
 
 for d in proc sys dev run;do
     echo "unmount $d"
-    umount -lfR $altroot/$d
+    # without -l option, fail to export pool.
+    umount -lR $altroot/$d
 done
 
 if [[ $bootmng != "grub" ]]; then
@@ -1011,12 +1039,32 @@ menuentry "${distri}_ZFS" {
     initrd /EFI/${distri,,}/initrd.img
     options "ro root=ZFS=$zfs_pool/${distri^^}/root $boot_args"
 }
+
+menuentry "previous ${distri}_ZFS" {
+    graphics on
+    ostype Linux
+    loader /EFI/${distri,,}/vmlinuz.old
+    initrd /EFI/${distri,,}/initrd.img.old
+    options "ro root=ZFS=$zfs_pool/${distri^^}/root $boot_args"
+}
+
 EOF_CONF
     cat refind/refind.conf
 
     if [[ ! -e /tmp/efi ]]; then
         mkdir /tmp/efi
     fi
+
+    mount /dev/md0 /tmp/efi
+    mkdir -p /tmp/efi/EFI/${distri,,}
+
+    rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
+
+    # install rEFInd
+    cp -r refind/. /tmp/efi/EFI/boot
+    umount /tmp/efi
+
+    # make EFI boot entry
     for drive in ${drives[@]}; do
         case "$drive" in
             [sv]d*)
@@ -1029,16 +1077,6 @@ EOF_CONF
                 efi="${drive}1"
                 ;;
         esac
-
-        mount /dev/${efi} /tmp/efi
-        # make fingerprint file
-        touch /tmp/efi/$efi_id
-        mkdir -p /tmp/efi/EFI/${distri,,}
-
-        rsync -a --copy-links --filter='- *.old' --filter='+ vmlinuz*' --filter='+ initrd.img*' --filter='- *' $altroot/boot/ /tmp/efi/EFI/${distri,,}
-
-        # install rEFInd
-        cp -pr refind/. /tmp/efi/EFI/boot
 
         # add EFI boot entry
         serial=$(lsblk -dno MODEL,SERIAL /dev/$drive | sed -e 's/ \+/_/g')
@@ -1079,9 +1117,10 @@ efibootmgr -c -d /dev/$drive -p 1 \
 EOF_SH
             fi
         fi
-        umount /tmp/efi
     done
 fi
+
+mdadm --stop /dev/md0
 
 if (( $has_serial == 1 )); then
     # make symlinks for ZFS drives
@@ -1147,6 +1186,12 @@ while (( $(zpool list -H | grep -c "^${zfs_pool}\s") != 0 )); do
     zpool export $zfs_pool
 done
 
+# workaraound to fix an error
+# sudo: unable to allocate pty
+# mount --make-rprivate fixed the error but fail to export.
+# https://unix.stackexchange.com/a/371208
+mount -t devpts pts /dev/pts
+
 # show final message
 echo Finished.
 if (( $efi_boot == 0 )); then
@@ -1155,12 +1200,12 @@ if (( $efi_boot == 0 )); then
     echo 3. Excec next command
     echo sh $SCRIPT_DIR/$INSTALL_EFI_ENTRY
     echo
-elif (( $do_reboot == 1 )); then
-    reboot
+elif (( $do_poweroff == 1 )); then
+    poweroff
 fi
 
-echo -n "Reboot now? [yes/NO] "
+echo -n "Power off now? [yes/NO] "
 read answer
 if [[ $answer =~ ^[Yy][Ee][Ss]$ ]]; then
-    reboot
+    poweroff
 fi

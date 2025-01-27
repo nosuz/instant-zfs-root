@@ -40,30 +40,6 @@ else
     exit
 fi
 
-cp $SCRIPT_DIR/scripts/mount-efi.sh /boot
-
-# https://www.golinuxcloud.com/run-script-at-startup-boot-without-cron-linux/
-cat << EOF > /etc/systemd/system/mount-efi.service
-[Unit]
-# Execute command after reboot
-Description=Mount EFI partition.
-After=default.target
-
-[Service]
-Type=simple
-RemainAfterExit=no
-ExecStart=/boot/mount-efi.sh
-TimeoutStartSec=0
-
-[Install]
-WantedBy=default.target
-EOF
-
-systemctl enable mount-efi
-systemctl start mount-efi
-
-sleep 5
-
 cp $SCRIPT_DIR/scripts/update-efi.sh /boot
 
 cat << EOF > /etc/systemd/system/update-efi.service
@@ -96,24 +72,6 @@ crontab -l | \
 
 # copy other utils.
 cp $SCRIPT_DIR/scripts/replace-zfs-drive.sh /root/bin
-
-# install EFI mout check program
-cp $SCRIPT_DIR/scripts/notify-efi-mount-error.sh /boot
-cat << EOF >> /etc/profile
-
-# check EFI is mouted as RW
-/boot/notify-efi-mount-error.sh
-
-EOF
-
-cat << EOF > /etc/xdg/autostart/mount-efi.desktop
-[Desktop Entry]
-Type=Application
-Name=My Script
-Exec=/boot/notify-efi-mount-error.sh
-Icon=system-run
-X-GNOME-Autostart-enabled=true
-EOF
 
 # install backup script
 cp $SCRIPT_DIR/backup/regist-backup.sh /root/bin/
